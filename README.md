@@ -1,2 +1,4 @@
 # Hipster
 A Haskell MIPS EDSL. Mostly for "educational purposes" (TM). More seriously the goal of this is to explore assembly DSLs in Haskell, and see how they're put together and what makes them tick. Can these be useful? Probably! One of the main goals is to allow for composable abstractions of assembly code, and automatic register allocation / spilling. In theory this could be more general and support multiple backends (after all there is overlap with LLVM's functionality), but an additional goal is to be able to generate readable, and documented assembly code. Because of this, it's beneficial to stick to one target assembly language, at least for experimentation!
+
+Ultimately Hipster is meant as a demonstration of how Haskell EDSL's can be useful. Even a small layer of abstraction can make things much nicer to work with.
