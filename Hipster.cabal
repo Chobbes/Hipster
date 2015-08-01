@@ -3,7 +3,7 @@
 
 name:                Hipster
 version:             0.1.0.0
-synopsis:            MIPS EDSL
+synopsis:            MIPs EDSL in Haskell.
 -- description:         
 homepage:            https://github.com/Chobbes/Hipster
 license:             MIT
