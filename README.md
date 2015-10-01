@@ -8,3 +8,4 @@ Keeping track of procedure names, and allowing the assembly lanuage to use this 
 
 # Comments
 We want the user to be able to write well commented assembly code. This means we are going to have to have comments at the label level, and at the assembly level. Additionally some formatting primitives must be available.
+Ultimately Hipster is meant as a demonstration of how Haskell EDSL's can be useful. Even a small layer of abstraction can make things much nicer to work with.
