@@ -31,7 +31,7 @@ import Data.Map as M
 data Register
      = Var Unique  -- ^ Any general purpose MIPS 32 register can be allocated for this.
      | Reg Integer -- ^ Specific register reserved.
-     deriving (Show)
+     deriving (Show, Eq)
 
 -- | Immediate values in MIPS.
 type Immediate = Integer
@@ -50,7 +50,7 @@ data Inst
     | MULTU Register Register
     | DIV Register Register
     | DIVU Register Register
-    deriving (Show)
+    deriving (Show, Eq)
 
 -- | MIPS assembly is essentially a list of instructions, which is what
 -- the Free monad gives us.
