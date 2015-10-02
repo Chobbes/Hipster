@@ -1,3 +1,23 @@
+{- Copyright (C) 2015 Calvin Beck
+   Permission is hereby granted, free of charge, to any person
+   obtaining a copy of this software and associated documentation files
+   (the "Software"), to deal in the Software without restriction,
+   including without limitation the rights to use, copy, modify, merge,
+   publish, distribute, sublicense, and/or sell copies of the Software,
+   and to permit persons to whom the Software is furnished to do so,
+   subject to the following conditions:
+   The above copyright notice and this permission notice shall be
+   included in all copies or substantial portions of the Software.
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+   NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+   BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+   ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
+-}
+
 module Language.Hipster.AST where
 
 -- import Control.Monad.Free hiding (Free, Pure)
@@ -34,33 +54,33 @@ data Inst
 
 -- | MIPS assembly is essentially a list of instructions, which is what
 -- the Free monad gives us.
-type MipsASM a = FreeT ((,) Inst) SimpleUniqueMonad a
+type MipsBlock a = FreeT ((,) Inst) SimpleUniqueMonad a
 
 
--- | Convert a MIPS program to a list of instructions.
-compile :: MipsASM a -> [Inst]
-compile = runSimpleUniqueMonad . compile'
+-- | Convert a MIPS block to a list of instructions.
+compileBlock :: MipsBlock a -> [Inst]
+compileBlock = runSimpleUniqueMonad . compile'
   where compile' free =
                do x <- runFreeT free
                   case x of
                     (Pure a) -> return []
-                    (Free (inst, fs)) -> fmap (inst :) $ compile' fs
+                    (Free (inst, fs)) -> (inst :) <$> compile' fs
 
 
 -- | Allocate a new 32-bit value (any register will do).
-newVar :: MipsASM Register
-newVar = do unique <- lift $ freshUnique
+newVar :: MipsBlock Register
+newVar = do unique <- lift freshUnique
             return $ Var unique
 
 
-add :: Register -> Register -> Register -> MipsASM Register
+add :: Register -> Register -> Register -> MipsBlock Register
 add d s t = liftF (ADD d s t, d)
 
-sub :: Register -> Register -> Register -> MipsASM Register
+sub :: Register -> Register -> Register -> MipsBlock Register
 sub d s t = liftF (SUB d s t, d)
 
 
--- | An actual MIPS program contains labels.
+-- | An actual MIPS program contains labels to basic blocks.
 type LabelMap = M.Map String Integer
 
-type MipsProgram a = FreeT ((,) )
+-- type MipsProgram a = FreeT ((,) )
