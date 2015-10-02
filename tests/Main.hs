@@ -21,13 +21,14 @@
 import Test.Hspec
 import Compiler.Hoopl
 import Language.Hipster.AST
+import Control.Monad
 
 main :: IO ()
 main = hspec $
   describe "AST var test" $
     it "newVar composition test" $
-      let y = do { a <- newVar; b <- newVar; c <- newVar; add a b c }
-          comp = compileBlock $ y >> y >> y
+      let addNews = do { a <- newVar; b <- newVar; c <- newVar; add a b c }
+          comp = compileBlock $ replicateM_ 3 addNews
           insts =  [ ADD (Var 1) (Var 2) (Var 3)
                    , ADD (Var 4) (Var 5) (Var 6)
                    , ADD (Var 7) (Var 8) (Var 9)]
