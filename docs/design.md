@@ -40,7 +40,7 @@ Hipster will not allow you to manually define labels with numerical suffixes, si
 
 ``` Haskell
 l1 <- newBB "l1" $ do
-    add newVar newVar newVar
+    add newVar newVar newVar <#> "This is an inline comment."
     jmp l2
 l2 <- newBB "l2" $ do
     # "Now I'm in l2"
