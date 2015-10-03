@@ -23,9 +23,9 @@
 
 module Language.Hipster.AST where
 
--- import Control.Monad.Free hiding (Free, Pure)
-import Control.Monad.Trans.Free  -- hiding (Free, Pure)
+import Control.Monad.Trans.Free
 import Control.Monad.Trans.Class
+import Control.Monad.State
 import Compiler.Hoopl hiding (LabelMap)
 import Data.Map as M
 
@@ -53,6 +53,8 @@ data Inst e x where
     MULTU :: Register -> Register -> Inst O O
     DIV :: Register -> Register -> Inst O O
     DIVU :: Register -> Register -> Inst O O
+    COMMENT :: String -> Inst O O
+    INLINE_COMMENT :: Inst e x -> String -> Inst e x
 
 deriving instance Show (Inst e x)
 deriving instance Eq (Inst e x)
@@ -87,5 +89,8 @@ sub d s t = liftF (SUB d s t, d)
 
 -- | An actual MIPS program contains labels to basic blocks.
 type LabelMap = M.Map String Integer
+
+-- Need a state monad which keeps track of the labels.
+type LabelState = State LabelMap
 
 -- type MipsProgram a = FreeT ((,) LabelMap) MipsBlock a
