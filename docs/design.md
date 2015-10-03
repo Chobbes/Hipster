@@ -20,6 +20,10 @@ Hipster programs can be nearly identical to MIPS assembly programs.
 
 https://en.wikipedia.org/wiki/SPIM#The_SPIM_operating_system
 
+# Basic Blocks
+
+A basic block in Hipster is constructed with the `MipsBlock` monad, which builds a list of instructions. We should probably use types to ensure that these actually do form basic blocks (no jumps or branches in the middle), much like what Hoopl does.
+
 # Registers
 
 In order to achieve composable abstractions Hipster will perform register allocation for you. However, it is also possible to ask for specific registers instead, which gives you all of the advantages of assembly languge.
