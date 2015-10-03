@@ -18,12 +18,15 @@
    SOFTWARE.
 -}
 
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE StandaloneDeriving #-}
+
 module Language.Hipster.AST where
 
 -- import Control.Monad.Free hiding (Free, Pure)
 import Control.Monad.Trans.Free  -- hiding (Free, Pure)
 import Control.Monad.Trans.Class
-import Compiler.Hoopl
+import Compiler.Hoopl hiding (LabelMap)
 import Data.Map as M
 
 
@@ -37,28 +40,30 @@ data Register
 type Immediate = Integer
 
 -- | Data type representing MIPS instructions.
-data Inst
-    = ADD Register Register Register
-    | ADDU Register Register Register
-    | ADDI Register Register Immediate
-    | ADDIU Register Register Immediate
-    | SUB Register Register Register
-    | SUBU Register Register Register
-    | SUBI Register Register Immediate
-    | SUBIU Register Register Immediate
-    | MULT Register Register
-    | MULTU Register Register
-    | DIV Register Register
-    | DIVU Register Register
-    deriving (Show, Eq)
+data Inst e x where
+    ADD :: Register -> Register -> Register -> Inst O O
+    ADDU :: Register -> Register -> Register -> Inst O O
+    ADDI :: Register -> Register -> Immediate -> Inst O O
+    ADDIU :: Register -> Register -> Immediate -> Inst O O
+    SUB :: Register -> Register -> Register -> Inst O O
+    SUBU :: Register -> Register -> Register -> Inst O O
+    SUBI :: Register -> Register -> Immediate -> Inst O O
+    SUBIU :: Register -> Register -> Immediate -> Inst O O
+    MULT :: Register -> Register -> Inst O O
+    MULTU :: Register -> Register -> Inst O O
+    DIV :: Register -> Register -> Inst O O
+    DIVU :: Register -> Register -> Inst O O
+
+deriving instance Show (Inst e x)
+deriving instance Eq (Inst e x)
 
 -- | MIPS assembly is essentially a list of instructions, which is what
 -- the Free monad gives us.
-type MipsBlock a = FreeT ((,) Inst) SimpleUniqueMonad a
+type MipsBlock a = FreeT ((,) (Inst O O)) SimpleUniqueMonad a
 
 
 -- | Convert a MIPS block to a list of instructions.
-compileBlock :: MipsBlock a -> [Inst]
+compileBlock :: MipsBlock a -> [Inst O O]
 compileBlock = runSimpleUniqueMonad . compile'
   where compile' free =
                do x <- runFreeT free
@@ -83,4 +88,4 @@ sub d s t = liftF (SUB d s t, d)
 -- | An actual MIPS program contains labels to basic blocks.
 type LabelMap = M.Map String Integer
 
--- type MipsProgram a = FreeT ((,) )
+-- type MipsProgram a = FreeT ((,) LabelMap) MipsBlock a
