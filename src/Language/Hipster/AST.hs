@@ -36,23 +36,28 @@ data Register
      | Reg Integer -- ^ Specific register reserved.
      deriving (Show, Eq)
 
+
+-- | Types to just keep track of whether we are reading from a register, or writing to it.
+type Dest = Register
+type Source = Register
+
 -- | Immediate values in MIPS.
 type Immediate = Integer
 
 -- | Data type representing MIPS instructions.
 data Inst e x where
-    ADD :: Register -> Register -> Register -> Inst O O
-    ADDU :: Register -> Register -> Register -> Inst O O
-    ADDI :: Register -> Register -> Immediate -> Inst O O
-    ADDIU :: Register -> Register -> Immediate -> Inst O O
-    SUB :: Register -> Register -> Register -> Inst O O
-    SUBU :: Register -> Register -> Register -> Inst O O
-    SUBI :: Register -> Register -> Immediate -> Inst O O
-    SUBIU :: Register -> Register -> Immediate -> Inst O O
-    MULT :: Register -> Register -> Inst O O
-    MULTU :: Register -> Register -> Inst O O
-    DIV :: Register -> Register -> Inst O O
-    DIVU :: Register -> Register -> Inst O O
+    ADD :: Dest -> Source -> Source -> Inst O O
+    ADDU :: Dest -> Source -> Source -> Inst O O
+    ADDI :: Dest -> Source -> Immediate -> Inst O O
+    ADDIU :: Dest -> Source -> Immediate -> Inst O O
+    SUB :: Dest -> Source -> Source -> Inst O O
+    SUBU :: Dest -> Source -> Source -> Inst O O
+    SUBI :: Dest -> Source -> Immediate -> Inst O O
+    SUBIU :: Dest -> Source -> Immediate -> Inst O O
+    MULT :: Source -> Source -> Inst O O
+    MULTU :: Source -> Source -> Inst O O
+    DIV :: Source -> Source -> Inst O O
+    DIVU :: Source -> Source -> Inst O O
     COMMENT :: String -> Inst O O
     INLINE_COMMENT :: Inst e x -> String -> Inst e x
 
@@ -80,10 +85,10 @@ newVar = do unique <- lift freshUnique
             return $ Var unique
 
 
-add :: Register -> Register -> Register -> MipsBlock Register
+add :: Dest -> Source -> Source -> MipsBlock Register
 add d s t = liftF (ADD d s t, d)
 
-sub :: Register -> Register -> Register -> MipsBlock Register
+sub :: Dest -> Source -> Source -> MipsBlock Register
 sub d s t = liftF (SUB d s t, d)
 
 
@@ -93,4 +98,4 @@ type LabelMap = M.Map String Integer
 -- Need a state monad which keeps track of the labels.
 type LabelState = State LabelMap
 
--- type MipsProgram a = FreeT ((,) LabelMap) MipsBlock a
+type MipsProgram a = FreeT ((,) LabelMap) LabelState a
