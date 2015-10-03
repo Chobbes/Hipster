@@ -118,3 +118,13 @@ instance Num (MipsBlock Register) where
 ```
 
 This will only work if every argument is a `Register` value, though. We want to be able to mix immediate values and register values, so this might be worth looking into as well.
+
+Arbitrary expressions of immediate values yield constants, so we don't lose too much if these expressions are only between registers (or possibly registers and immediates).
+
+We have a problem since `(+) :: Num a => a -> a -> a`. So, if we blindly take `(+) :: MipsBlock Value -> MipsBlock Value -> MipsBlock Value`, where
+
+``` Haskell
+type Value = Either Register Immediate
+```
+
+this would mean that the result of `(+)` could be an immediate value. This could be bad.
