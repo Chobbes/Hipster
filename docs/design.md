@@ -53,11 +53,13 @@ Eeach label should probably be assigned a unique identifier (SimpleUniqueMonad?)
 
 # TODO
 
+- Compile to MIPS
 - Web and console interface for debugging
 - Recording and playback of machine state
 - MIPS parser to allow for conversion to Hipster, and debugging of ordinary MIPS code
 - Code analysis using Hoopl
   - Calling convention assertions? https://en.wikipedia.org/wiki/MIPS_instruction_set#Compiler_register_usage
+  - Check sizes of integers? Do they fit as immediate values?
 - Optimization passes (for instance unrolling loop structures nicely)
 - Convert to LLVM for native compilation?
 - Provide a library of pre-existing utilities for writing MIPS code (loops and such).
@@ -73,3 +75,46 @@ This is a wonderful library by John Wiegley, and this module does almost exactly
   - The behaviour we want is slightly different. In order to be able to make composable abstractions we intend to have new labels be generated if the same name is used multiple times (similar to `newVar`). So, our use case is slightly different here.
   - Binding the label to a variable may be desirable as well. By doing this we can ensure that the labels we use exist at Haskell compile time.
   - Might be able to talk to John Wiegley about allowing the user to replace [getLabel](https://github.com/jwiegley/linearscan-hoopl/blob/master/LinearScan/Hoopl/DSL.hs#L58)
+
+## newVar Issues
+
+`newVar` is usually useless unless we can refer to the variable later, so it sort of makes sense to have the user bind this beforehand.
+
+``` Haskell
+result <- newVar
+add result x y
+```
+
+But it's possible to construct a useless one...
+
+``` Haskell
+newVar
+```
+
+We could remove this using dataflow analysis, and possibly throw a warning as this might signal an error.
+
+Additionally it may be convenient to allow for the following...
+
+``` Haskell
+result <- add newVar x y
+```
+
+But then `add` would have to take `MipsBlock Register` values as arguments, which might not be ideal. It's easy enough to create abstractions for this in Hipster.
+
+``` Haskell
+add' :: Register -> Register -> MipsBlock Register
+add' x y = do result <- newVar
+              add result x y
+```
+
+Interestingly, Hipster should allow us to define arithmetic expressions infix style. For instance:
+
+``` Haskell
+instance Num (MipsBlock Register) where
+  (+) x y = do x' <- x
+               y' <- y
+               result <- newVar
+               add result x' y'
+```
+
+This will only work if every argument is a `Register` value, though. We want to be able to mix immediate values and register values, so this might be worth looking into as well.
