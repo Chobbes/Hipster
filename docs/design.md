@@ -46,6 +46,7 @@ Hipster will not allow you to write these prefixes manually.
 - Code analysis using Hoopl
 - Optimization passes (for instance unrolling loop structures nicely)
 - Convert to LLVM for native compilation?
+- Provide a library of pre-existing utilities for writing MIPS code (loops and such).
 
 # Notes
 
@@ -53,5 +54,5 @@ Hipster will not allow you to write these prefixes manually.
 
 This is a wonderful library by John Wiegley, and this module does almost exactly what we want (in fact a good chunk of the code that I have written at this point seems to be reinventing the wheel). I think we want to:
 
-- Handle labels differently. Stuff as many compile time guarantees as we can in there. This module performs string look ups for labels. If the label with the same name already exists it will be reused. The behaviour we want is slightly different. In order to be able to make composable abstractions we intend to have new labels be generated if the same name is used multiple times. So, our use case is slightly different here.
+- Handle labels differently. Stuff as many compile time guarantees as we can in there. This module performs string look ups for labels. If the label with the same name already exists it will be reused. The behaviour we want is slightly different. In order to be able to make composable abstractions we intend to have new labels be generated if the same name is used multiple times (for example a loop abstraction). So, our use case is slightly different here.
   - Might be able to talk to John Wiegley about allowing the user to replace [getLabel](https://github.com/jwiegley/linearscan-hoopl/blob/master/LinearScan/Hoopl/DSL.hs#L58)
