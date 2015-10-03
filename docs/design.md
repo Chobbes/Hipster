@@ -57,6 +57,6 @@ This is a wonderful library by John Wiegley, and this module does almost exactly
 
 - Handle labels differently. Stuff as many compile time guarantees as we can in there.
   - This module simply performs string look ups for labels at run time. If the label with the same name already exists the label will be reused.
-  - The behaviour we want is slightly different. In order to be able to make composable abstractions we intend to have new labels be generated if the same name is used multiple times (for example for a loop abstraction). So, our use case is slightly different here.
+  - The behaviour we want is slightly different. In order to be able to make composable abstractions we intend to have new labels be generated if the same name is used multiple times (similar to `newVar`). So, our use case is slightly different here.
   - Binding the label to a variable may be desirable as well. By doing this we can ensure that the labels we use exist at Haskell compile time.
   - Might be able to talk to John Wiegley about allowing the user to replace [getLabel](https://github.com/jwiegley/linearscan-hoopl/blob/master/LinearScan/Hoopl/DSL.hs#L58)
