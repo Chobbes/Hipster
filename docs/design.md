@@ -44,6 +44,7 @@ Hipster will not allow you to write these prefixes manually.
 - Recording and playback of machine state
 - MIPS parser to allow for conversion to Hipster, and debugging of ordinary MIPS code
 - Code analysis using Hoopl
+  - Calling convention assertions? https://en.wikipedia.org/wiki/MIPS_instruction_set#Compiler_register_usage
 - Optimization passes (for instance unrolling loop structures nicely)
 - Convert to LLVM for native compilation?
 - Provide a library of pre-existing utilities for writing MIPS code (loops and such).
