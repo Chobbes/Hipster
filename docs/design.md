@@ -43,9 +43,13 @@ l1 <- newBB "l1" $ do
     add newVar newVar newVar
     jmp l2
 l2 <- newBB "l2" $ do
-    # Now I'm in l2
+    # "Now I'm in l2"
     exit
 ```
+
+## Implementation
+
+Eeach label should probably be assigned a unique identifier (SimpleUniqueMonad?)
 
 # TODO
 
