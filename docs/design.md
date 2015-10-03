@@ -45,3 +45,4 @@ Hipster will not allow you to write these prefixes manually.
 - MIPS parser to allow for conversion to Hipster, and debugging of ordinary MIPS code
 - Code analysis using Hoopl
 - Optimization passes (for instance unrolling loop structures nicely)
+- Convert to LLVM for native compilation?
