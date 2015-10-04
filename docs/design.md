@@ -47,6 +47,8 @@ l2 <- newBB "l2" $ do
     exit
 ```
 
+In order to enumerate the prefixes appropriately we may have to defer, like with `SimpleUniqueMonad`. Otherwise rewrites to the graph will result in skewed label numberings.
+
 ## Implementation
 
 Eeach label should probably be assigned a unique identifier (SimpleUniqueMonad?)
