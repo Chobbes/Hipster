@@ -36,9 +36,10 @@ data Register
      | Reg Integer -- ^ Specific register reserved.
      deriving (Show, Eq)
 
-
--- | Types to just keep track of whether we are reading from a register, or writing to it.
+-- | Indicates a register that we write to.
 type Dest = Register
+
+-- | Indicates a register that we read from.
 type Source = Register
 
 -- | Immediate values in MIPS.
@@ -75,7 +76,7 @@ compileBlock = runSimpleUniqueMonad . compile'
   where compile' free =
                do x <- runFreeT free
                   case x of
-                    (Pure a) -> return []
+                    (Pure _) -> return []
                     (Free (inst, fs)) -> (inst :) <$> compile' fs
 
 
