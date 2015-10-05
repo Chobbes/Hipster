@@ -20,6 +20,8 @@
 
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Language.Hipster.AST where
 
@@ -27,7 +29,8 @@ import Control.Monad.Trans.Free
 import Control.Monad.Trans.Class
 import Control.Monad.State
 import Compiler.Hoopl hiding (LabelMap)
-import Data.Map as M
+import qualified Data.Map as M
+import Data.Function
 
 
 -- | Data type for register allocation.
@@ -59,6 +62,7 @@ data Inst e x where
     MULTU :: Source -> Source -> Inst O O
     DIV :: Source -> Source -> Inst O O
     DIVU :: Source -> Source -> Inst O O
+    JMP :: Label -> Inst O C
     COMMENT :: String -> Inst O O
     INLINE_COMMENT :: Inst e x -> String -> Inst e x
 
@@ -68,7 +72,6 @@ deriving instance Eq (Inst e x)
 -- | MIPS assembly is essentially a list of instructions, which is what
 -- the Free monad gives us.
 type MipsBlock a = FreeT ((,) (Inst O O)) SimpleUniqueMonad a
-
 
 -- | Convert a MIPS block to a list of instructions.
 compileBlock :: MipsBlock a -> [Inst O O]
@@ -92,19 +95,37 @@ add d s t = liftF (ADD d s t, d)
 sub :: Dest -> Source -> Source -> MipsBlock Register
 sub d s t = liftF (SUB d s t, d)
 
+jmp :: Label -> MipsBlock (Inst O C)
+jmp l = return $ JMP l
 
 -- | An actual MIPS program contains labels to basic blocks.
 type LabelMap = M.Map String Integer
 
 -- Need a state monad which keeps track of the labels.
-type LabelState = State LabelMap
+type LabelState = StateT LabelMap SimpleUniqueMonad
 
-type MipsProgram a = FreeT ((,) (MipsLabelBlock a)) LabelState ()
+type MipsProgram a = FreeT ((,) (MipsLabelBlock (Inst O C))) LabelState a
 
+instance MonadFix (FreeT ((,) (MipsLabelBlock (Inst O C))) LabelState) where
+--  mfix :: (a -> m a) -> m a
+  mfix f = fix _
 
 -- | A basic block for a MIPS program.
 data MipsLabelBlock a = MipsLabelBlock { blockLabel :: Label  -- ^ Unique Hoopl label.
                                        , labelPrefix :: String -- ^ Label prefix string.
-                                       , labelNum :: Integer  -- ^ May be multiple labels with the same prefix.
+                                       , labelNum :: Int  -- ^ May be multiple labels with the same prefix.
                                        , mipsBlock :: MipsBlock a -- ^ Actual block of MIPS instructions.
                                        }
+
+newBB :: String -> MipsBlock (Inst O C) -> MipsProgram Label
+newBB name block = do label <- lift $ lift freshLabel
+                      liftF (MipsLabelBlock label name 0 block, label)
+
+-- | Convert a MIPS block to a list of instructions.
+compileProg :: MipsProgram a -> [(Label, String, [Inst O O])]
+compileProg = runSimpleUniqueMonad . fmap (map (\lb -> (blockLabel lb, labelPrefix lb, compileBlock $ mipsBlock lb))) . flip evalStateT M.empty . compile'
+  where compile' free =
+               do x <- runFreeT free
+                  case x of
+                    (Pure _) -> return []
+                    (Free (lBlock, fs)) -> (lBlock :) <$> compile' fs
