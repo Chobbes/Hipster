@@ -99,4 +99,12 @@ type LabelMap = M.Map String Integer
 -- Need a state monad which keeps track of the labels.
 type LabelState = State LabelMap
 
-type MipsProgram a = FreeT ((,) LabelMap) LabelState a
+type MipsProgram a = FreeT ((,) (MipsLabelBlock a)) LabelState ()
+
+
+-- | A basic block for a MIPS program.
+data MipsLabelBlock a = MipsLabelBlock { blockLabel :: Label  -- ^ Unique Hoopl label.
+                                       , labelPrefix :: String -- ^ Label prefix string.
+                                       , labelNum :: Integer  -- ^ May be multiple labels with the same prefix.
+                                       , mipsBlock :: MipsBlock a -- ^ Actual block of MIPS instructions.
+                                       }
