@@ -136,4 +136,5 @@ compileProg :: MipsProgram a -> SimpleUniqueMonad [(MipsLabel, String, [Inst O O
 compileProg = flip evalState (M.empty, 0) . compile'
   where compile' state =
           do x <- execStateT state IM.empty
-             return . mapM (\(k, v) -> do {cb <- compileBlock $ mipsBlock v; return (k, labelPrefix v, cb)}) $ IM.toList x
+             return . mapM (\(k, v) -> do cb <- compileBlock $ mipsBlock v
+                                          return (k, labelPrefix v, cb)) $ IM.toList x
