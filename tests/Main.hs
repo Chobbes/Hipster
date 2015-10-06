@@ -18,6 +18,8 @@
    SOFTWARE.
 -}
 
+{-# LANGUAGE RecursiveDo #-}
+
 import Test.Hspec
 import Compiler.Hoopl
 import Language.Hipster.AST
@@ -25,6 +27,7 @@ import Control.Monad
 
 main :: IO ()
 main = do print $ compileProg labelTest
+          print $ compileProg labelTest'
           hspec $
             describe "AST var test" $
               it "newVar composition test" $
@@ -35,17 +38,32 @@ main = do print $ compileProg labelTest
                              , ADD (Var 7) (Var 8) (Var 9)]
                 in comp `shouldBe` insts
 
-labelTest :: MipsProgram Register
-labelTest = do l1 <- newBB "l1" $ do
-                 res <- newVar
-                 x <- newVar
-                 y <- newVar
-                 add res x y
-                 jmp l1
-               l2 <- newBB "l2" $ do
-                 res <- newVar
-                 x <- newVar
-                 y <- newVar
-                 sub res x y
-                 jmp l1
-               return l2
+labelTest :: MipsProgram ()
+labelTest = mdo l1 <- newBB "l1" $ do
+                  res <- newVar
+                  x <- newVar
+                  y <- newVar
+                  add res x y
+                  jmp l1
+                l2 <- newBB "l2" $ do
+                  res <- newVar
+                  x <- newVar
+                  y <- newVar
+                  sub res x y
+                  jmp l1
+                return ()
+
+labelTest' :: MipsProgram ()
+labelTest' = mdo l1 <- newBB "l1" $ do
+                   res <- newVar
+                   x <- newVar
+                   y <- newVar
+                   add res x y
+                   jmp l2
+                 l2 <- newBB "l2" $ do
+                   res <- newVar
+                   x <- newVar
+                   y <- newVar
+                   sub res x y
+                   jmp l1
+                 return ()
