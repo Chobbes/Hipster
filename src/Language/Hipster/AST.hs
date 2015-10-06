@@ -20,17 +20,17 @@
 
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE FlexibleInstances #-}
 
 module Language.Hipster.AST where
 
 import Control.Monad.Trans.Free
 import Control.Monad.Trans.Class
 import Control.Monad.State
-import Compiler.Hoopl hiding (LabelMap)
+import Compiler.Hoopl
 import qualified Data.Map as M
+import qualified Data.IntMap as IM
 import Data.Function
+import Data.Maybe
 
 
 -- | Data type for register allocation.
@@ -62,7 +62,7 @@ data Inst e x where
     MULTU :: Source -> Source -> Inst O O
     DIV :: Source -> Source -> Inst O O
     DIVU :: Source -> Source -> Inst O O
-    JMP :: Label -> Inst O C
+    JMP :: Int -> Inst O C
     COMMENT :: String -> Inst O O
     INLINE_COMMENT :: Inst e x -> String -> Inst e x
 
@@ -95,37 +95,40 @@ add d s t = liftF (ADD d s t, d)
 sub :: Dest -> Source -> Source -> MipsBlock Register
 sub d s t = liftF (SUB d s t, d)
 
-jmp :: Label -> MipsBlock (Inst O C)
+jmp :: Int -> MipsBlock (Inst O C)
 jmp l = return $ JMP l
 
--- | An actual MIPS program contains labels to basic blocks.
-type LabelMap = M.Map String Integer
+
+-- | Keeps track of label numbers, and unique Hoopl labelings.
+type LabelMonad = State (M.Map String Int, Int)
+
+getLabel :: String -> LabelMonad Int
+getLabel name = do strNum <- gets $ fromMaybe 0 . M.lookup name . fst
+                   unique <- gets $ succ . snd
+                   modify $ \(m,_) -> (M.insert name (strNum+1) m, unique)
+                   return unique
 
 -- Need a state monad which keeps track of the labels.
-type LabelState = StateT LabelMap SimpleUniqueMonad
+type MipsProgram = StateT (IM.IntMap (MipsLabelBlock (Inst O C))) LabelMonad
 
-type MipsProgram a = FreeT ((,) (MipsLabelBlock (Inst O C))) LabelState a
-
-instance MonadFix (FreeT ((,) (MipsLabelBlock (Inst O C))) LabelState) where
---  mfix :: (a -> m a) -> m a
-  mfix f = fix _
 
 -- | A basic block for a MIPS program.
-data MipsLabelBlock a = MipsLabelBlock { blockLabel :: Label  -- ^ Unique Hoopl label.
+data MipsLabelBlock a = MipsLabelBlock { blockLabel :: Int  -- ^ Unique Hoopl label.
                                        , labelPrefix :: String -- ^ Label prefix string.
                                        , labelNum :: Int  -- ^ May be multiple labels with the same prefix.
                                        , mipsBlock :: MipsBlock a -- ^ Actual block of MIPS instructions.
                                        }
 
-newBB :: String -> MipsBlock (Inst O C) -> MipsProgram Label
-newBB name block = do label <- lift $ lift freshLabel
-                      liftF (MipsLabelBlock label name 0 block, label)
+newBB :: String -> MipsBlock (Inst O C) -> MipsProgram Int
+newBB name block = do label <- lift $ getLabel name
+                      let newBlock = MipsLabelBlock label name 0 block
+                      
+                      modify $ IM.insert label newBlock
+                      return label
 
 -- | Convert a MIPS block to a list of instructions.
-compileProg :: MipsProgram a -> [(Label, String, [Inst O O])]
-compileProg = runSimpleUniqueMonad . fmap (map (\lb -> (blockLabel lb, labelPrefix lb, compileBlock $ mipsBlock lb))) . flip evalStateT M.empty . compile'
-  where compile' free =
-               do x <- runFreeT free
-                  case x of
-                    (Pure _) -> return []
-                    (Free (lBlock, fs)) -> (lBlock :) <$> compile' fs
+compileProg :: MipsProgram a -> [(Int, String, [Inst O O])]
+compileProg = flip evalState (M.empty, 0) . compile'
+  where compile' state =
+          do x <- execStateT state IM.empty
+             return . map (\(k, v) -> (k, labelPrefix v, compileBlock $ mipsBlock v)) $ IM.toList x
