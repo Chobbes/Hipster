@@ -48,6 +48,9 @@ type Source = Register
 -- | Immediate values in MIPS.
 type Immediate = Integer
 
+-- | Type for keeping track of unique MIPS labels.
+type MipsLabel = Int
+
 -- | Data type representing MIPS instructions.
 data Inst e x where
     ADD :: Dest -> Source -> Source -> Inst O O
@@ -62,7 +65,7 @@ data Inst e x where
     MULTU :: Source -> Source -> Inst O O
     DIV :: Source -> Source -> Inst O O
     DIVU :: Source -> Source -> Inst O O
-    JMP :: Int -> Inst O C
+    JMP :: MipsLabel -> Inst O C
     COMMENT :: String -> Inst O O
     INLINE_COMMENT :: Inst e x -> String -> Inst e x
 
@@ -95,14 +98,14 @@ add d s t = liftF (ADD d s t, d)
 sub :: Dest -> Source -> Source -> MipsBlock Register
 sub d s t = liftF (SUB d s t, d)
 
-jmp :: Int -> MipsBlock (Inst O C)
+jmp :: MipsLabel -> MipsBlock (Inst O C)
 jmp l = return $ JMP l
 
 
 -- | Keeps track of label numbers, and unique Hoopl labelings.
-type LabelMonad = State (M.Map String Int, Int)
+type LabelMonad = State (M.Map String Int, MipsLabel)
 
-getLabel :: String -> LabelMonad Int
+getLabel :: String -> LabelMonad MipsLabel
 getLabel name = do strNum <- gets $ fromMaybe 0 . M.lookup name . fst
                    unique <- gets $ succ . snd
                    modify $ \(m,_) -> (M.insert name (strNum+1) m, unique)
@@ -113,7 +116,7 @@ type MipsProgram = StateT (IM.IntMap (MipsLabelBlock (Inst O C))) LabelMonad
 
 
 -- | A basic block for a MIPS program.
-data MipsLabelBlock a = MipsLabelBlock { blockLabel :: Int  -- ^ Unique Hoopl label.
+data MipsLabelBlock a = MipsLabelBlock { blockLabel :: MipsLabel  -- ^ Unique Hoopl label.
                                        , labelPrefix :: String -- ^ Label prefix string.
                                        , labelNum :: Int  -- ^ May be multiple labels with the same prefix.
                                        , mipsBlock :: MipsBlock a -- ^ Actual block of MIPS instructions.
@@ -127,7 +130,7 @@ newBB name block = do label <- lift $ getLabel name
                       return label
 
 -- | Convert a MIPS block to a list of instructions.
-compileProg :: MipsProgram a -> [(Int, String, [Inst O O])]
+compileProg :: MipsProgram a -> [(MipsLabel, String, [Inst O O])]
 compileProg = flip evalState (M.empty, 0) . compile'
   where compile' state =
           do x <- execStateT state IM.empty
