@@ -77,8 +77,8 @@ deriving instance Eq (Inst e x)
 type MipsBlock a = FreeT ((,) (Inst O O)) SimpleUniqueMonad a
 
 -- | Convert a MIPS block to a list of instructions.
-compileBlock :: MipsBlock a -> [Inst O O]
-compileBlock = runSimpleUniqueMonad . compile'
+compileBlock :: MipsBlock a -> SimpleUniqueMonad [Inst O O]
+compileBlock = compile'
   where compile' free =
                do x <- runFreeT free
                   case x of
@@ -122,6 +122,8 @@ data MipsLabelBlock a = MipsLabelBlock { blockLabel :: MipsLabel  -- ^ Unique Ho
                                        , mipsBlock :: MipsBlock a -- ^ Actual block of MIPS instructions.
                                        }
 
+
+-- | Create a new basic block with a named label.
 newBB :: String -> MipsBlock (Inst O C) -> MipsProgram Int
 newBB name block = do label <- lift $ getLabel name
                       let newBlock = MipsLabelBlock label name 0 block
@@ -130,8 +132,8 @@ newBB name block = do label <- lift $ getLabel name
                       return label
 
 -- | Convert a MIPS block to a list of instructions.
-compileProg :: MipsProgram a -> [(MipsLabel, String, [Inst O O])]
+compileProg :: MipsProgram a -> SimpleUniqueMonad [(MipsLabel, String, [Inst O O])]
 compileProg = flip evalState (M.empty, 0) . compile'
   where compile' state =
           do x <- execStateT state IM.empty
-             return . map (\(k, v) -> (k, labelPrefix v, compileBlock $ mipsBlock v)) $ IM.toList x
+             return . mapM (\(k, v) -> do {cb <- compileBlock $ mipsBlock v; return (k, labelPrefix v, cb)}) $ IM.toList x
