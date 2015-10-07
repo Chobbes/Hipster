@@ -148,13 +148,13 @@ newBB name block = do label <- lift $ getLabel name
                       return label
 
 
--- | Convert a MIPS block to a list of instructions.
-compileProg :: MipsProgram a -> SimpleUniqueMonad [(Label, String, [Inst O O])]
-compileProg = flip evalState (M.empty, intToLabel 0) . compile'
+-- | Convert a MIPS program to an assoc list of labels and their blocks.
+compileProgList :: MipsProgram a -> SimpleUniqueMonad [(Label, (Block Inst C C))]
+compileProgList = flip evalState (M.empty, intToLabel 0) . compile'
   where compile' state =
           do x <- execStateT state mapEmpty
-             return . mapM (\(k, v) -> do cb <- compileBlock $ mipsBlock v
-                                          return (k, labelPrefix v, cb)) $ mapToList x
+             return . mapM (\(k, v) -> do cb <- toHooplClosed v
+                                          return (k, cb)) $ mapToList x
 
 
 toHooplClosed :: MipsLabelBlock (Inst O C) -> SimpleUniqueMonad (Block Inst C C)
@@ -163,5 +163,6 @@ toHooplClosed lb = blockJoinHead label <$> mipsComp
         mipsComp = toHooplBlock $ mipsBlock lb
 
 
-compileGraph :: MipsProgram a -> SimpleUniqueMonad (Graph Inst C C)
-compileGraph = undefined
+-- | Compile a MIPS program to a Hoopl graph.
+compileProg :: MipsProgram a -> SimpleUniqueMonad (Graph Inst C C)
+compileProg prog = liftM (bodyGraph . mapFromList) $ compileProgList prog
