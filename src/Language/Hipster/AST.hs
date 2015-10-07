@@ -54,7 +54,7 @@ type MipsLabel = Int
 
 -- | Data type representing MIPS instructions.
 data Inst e x where
-    LABEL :: MipsLabel -> Inst C O
+    LABEL :: MipsLabel -> String -> Int -> Inst C O
     ADD :: Dest -> Source -> Source -> Inst O O
     ADDU :: Dest -> Source -> Source -> Inst O O
     ADDI :: Dest -> Source -> Immediate -> Inst O O
@@ -75,7 +75,7 @@ deriving instance Show (Inst e x)
 deriving instance Eq (Inst e x)
 
 instance NonLocal Inst where
-  entryLabel (LABEL l) = mipsToLabel l
+  entryLabel (LABEL l _ _) = mipsToLabel l
   successors (JMP l) = [mipsToLabel l]
 
 
@@ -160,10 +160,10 @@ compileProg = flip evalState (M.empty, 0) . compile'
 
 toHooplClosed :: MipsLabelBlock (Inst O C) -> SimpleUniqueMonad (Block Inst C C)
 toHooplClosed lb = blockJoinHead label <$> mipsComp
-  where label = LABEL $ blockLabel lb
+  where label = LABEL (blockLabel lb) (labelPrefix lb) (labelNum lb)
         mipsComp = toHooplBlock $ mipsBlock lb
 
 {-
-compileGraph :: MipsProgram a -> SimpleUniqueMonad (Graph (MipsLabelBlock (Inst)) C C)
+compileGraph :: MipsProgram a -> SimpleUniqueMonad (Graph Inst C C)
 compileGraph = undefined
 -}
