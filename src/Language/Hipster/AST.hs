@@ -85,6 +85,12 @@ compileBlock = compile'
                     (Pure _) -> return []
                     (Free (inst, fs)) -> (inst :) <$> compile' fs
 
+-- | Convert a MIPS block to a Hoopl block.
+toHooplBlock :: MipsBlock a -> SimpleUniqueMonad (Block Inst O O)
+toHooplBlock free = do fNode <- runFreeT free
+                       case fNode of
+                         (Pure _) -> return emptyBlock
+                         (Free (inst, fs)) -> blockCons inst <$> toHooplBlock fs
 
 -- | Allocate a new 32-bit value (any register will do).
 newVar :: MipsBlock Register
@@ -122,9 +128,8 @@ data MipsLabelBlock a = MipsLabelBlock { blockLabel :: MipsLabel  -- ^ Unique Ho
                                        , mipsBlock :: MipsBlock a -- ^ Actual block of MIPS instructions.
                                        }
 
-
 -- | Create a new basic block with a named label.
-newBB :: String -> MipsBlock (Inst O C) -> MipsProgram Int
+newBB :: String -> MipsBlock (Inst O C) -> MipsProgram MipsLabel
 newBB name block = do label <- lift $ getLabel name
                       let newBlock = MipsLabelBlock label name 0 block
                       
@@ -138,3 +143,8 @@ compileProg = flip evalState (M.empty, 0) . compile'
           do x <- execStateT state IM.empty
              return . mapM (\(k, v) -> do cb <- compileBlock $ mipsBlock v
                                           return (k, labelPrefix v, cb)) $ IM.toList x
+
+{-
+compileGraph :: MipsProgram a -> SimpleUniqueMonad (Graph (MipsLabelBlock (Inst)) C C)
+compileGraph = undefined
+-}
