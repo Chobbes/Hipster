@@ -49,12 +49,9 @@ type Source = Register
 -- | Immediate values in MIPS.
 type Immediate = Integer
 
--- | Type for keeping track of unique MIPS labels.
-type MipsLabel = Int
-
 -- | Data type representing MIPS instructions.
 data Inst e x where
-    LABEL :: MipsLabel -> String -> Int -> Inst C O
+    LABEL :: Label -> String -> Int -> Inst C O
     ADD :: Dest -> Source -> Source -> Inst O O
     ADDU :: Dest -> Source -> Source -> Inst O O
     ADDI :: Dest -> Source -> Immediate -> Inst O O
@@ -67,7 +64,7 @@ data Inst e x where
     MULTU :: Source -> Source -> Inst O O
     DIV :: Source -> Source -> Inst O O
     DIVU :: Source -> Source -> Inst O O
-    JMP :: MipsLabel -> Inst O C
+    JMP :: Label -> Inst O C
     COMMENT :: String -> Inst O O
     INLINE_COMMENT :: Inst e x -> String -> Inst e x
 
@@ -75,13 +72,9 @@ deriving instance Show (Inst e x)
 deriving instance Eq (Inst e x)
 
 instance NonLocal Inst where
-  entryLabel (LABEL l _ _) = mipsToLabel l
-  successors (JMP l) = [mipsToLabel l]
+  entryLabel (LABEL l _ _) = l
+  successors (JMP l) = [l]
 
-
--- | Convert a MipsLabel into a Hoopl label.
-mipsToLabel :: MipsLabel -> Label
-mipsToLabel = unsafeCoerce  -- Label is just a newtype of Unique, which is a newtype of Int.
 
 -- | MIPS assembly is essentially a list of instructions, which is what
 -- the Free monad gives us.
@@ -116,46 +109,52 @@ add d s t = liftF (ADD d s t, d)
 sub :: Dest -> Source -> Source -> MipsBlock Register
 sub d s t = liftF (SUB d s t, d)
 
-jmp :: MipsLabel -> MipsBlock (Inst O C)
+jmp :: Label -> MipsBlock (Inst O C)
 jmp l = return $ JMP l
 
 
 -- | Keeps track of label numbers, and unique Hoopl labelings.
-type LabelMonad = State (M.Map String Int, MipsLabel)
+type LabelMonad = State (M.Map String Int, Label)
 
-getLabel :: String -> LabelMonad MipsLabel
+getLabel :: String -> LabelMonad Label
 getLabel name = do strNum <- gets $ fromMaybe 0 . M.lookup name . fst
-                   unique <- gets $ succ . snd
+                   unique <- gets $ intToLabel . succ . labelToInt . snd
                    modify $ \(m,_) -> (M.insert name (strNum+1) m, unique)
                    return unique
 
+labelToInt :: Label -> Int
+labelToInt = unsafeCoerce
+
+intToLabel :: Int -> Label
+intToLabel = unsafeCoerce
+
 -- Need a state monad which keeps track of the labels.
-type MipsProgram = StateT (IM.IntMap (MipsLabelBlock (Inst O C))) LabelMonad
+type MipsProgram = StateT (LabelMap (MipsLabelBlock (Inst O C))) LabelMonad
 
 
 -- | A basic block for a MIPS program.
-data MipsLabelBlock a = MipsLabelBlock { blockLabel :: MipsLabel  -- ^ Unique Hoopl label.
+data MipsLabelBlock a = MipsLabelBlock { blockLabel :: Label  -- ^ Unique Hoopl label.
                                        , labelPrefix :: String -- ^ Label prefix string.
                                        , labelNum :: Int  -- ^ May be multiple labels with the same prefix.
                                        , mipsBlock :: MipsBlock a -- ^ Actual block of MIPS instructions.
                                        }
 
 -- | Create a new basic block with a named label.
-newBB :: String -> MipsBlock (Inst O C) -> MipsProgram MipsLabel
+newBB :: String -> MipsBlock (Inst O C) -> MipsProgram Label
 newBB name block = do label <- lift $ getLabel name
                       let newBlock = MipsLabelBlock label name 0 block
                       
-                      modify $ IM.insert label newBlock
+                      modify $ mapInsert label newBlock
                       return label
 
 
 -- | Convert a MIPS block to a list of instructions.
-compileProg :: MipsProgram a -> SimpleUniqueMonad [(MipsLabel, String, [Inst O O])]
-compileProg = flip evalState (M.empty, 0) . compile'
+compileProg :: MipsProgram a -> SimpleUniqueMonad [(Label, String, [Inst O O])]
+compileProg = flip evalState (M.empty, intToLabel 0) . compile'
   where compile' state =
-          do x <- execStateT state IM.empty
+          do x <- execStateT state mapEmpty
              return . mapM (\(k, v) -> do cb <- compileBlock $ mipsBlock v
-                                          return (k, labelPrefix v, cb)) $ IM.toList x
+                                          return (k, labelPrefix v, cb)) $ mapToList x
 
 
 toHooplClosed :: MipsLabelBlock (Inst O C) -> SimpleUniqueMonad (Block Inst C C)
@@ -163,7 +162,6 @@ toHooplClosed lb = blockJoinHead label <$> mipsComp
   where label = LABEL (blockLabel lb) (labelPrefix lb) (labelNum lb)
         mipsComp = toHooplBlock $ mipsBlock lb
 
-{-
+
 compileGraph :: MipsProgram a -> SimpleUniqueMonad (Graph Inst C C)
 compileGraph = undefined
--}
