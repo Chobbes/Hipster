@@ -157,6 +157,7 @@ compileProgList = flip evalState (M.empty, intToLabel 0) . compile'
                                           return (k, cb)) $ mapToList x
 
 
+-- | Convert a MipsLabelBlock into a closed Hoopl Block.
 toHooplClosed :: MipsLabelBlock (Inst O C) -> SimpleUniqueMonad (Block Inst C C)
 toHooplClosed lb = blockJoinHead label <$> mipsComp
   where label = LABEL (blockLabel lb) (labelPrefix lb) (labelNum lb)

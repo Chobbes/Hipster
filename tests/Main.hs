@@ -26,7 +26,9 @@ import Language.Hipster.AST
 import Control.Monad
 
 main :: IO ()
-main = do hspec $
+main = do putStrLn . showGraph show $ runSimpleUniqueMonad . compileProg $ labelTest
+          putStrLn . showGraph show $ runSimpleUniqueMonad . compileProg $ labelTest'
+          hspec $
             describe "AST var test" $
               it "newVar composition test" $
                 let addNews = do { a <- newVar; b <- newVar; c <- newVar; add a b c }
