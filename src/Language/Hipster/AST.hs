@@ -20,6 +20,8 @@
 
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 
 module Language.Hipster.AST where
 
@@ -32,12 +34,14 @@ import qualified Data.IntMap as IM
 import Data.Function
 import Data.Maybe
 import Unsafe.Coerce
+import LinearScan.Hoopl
+import LinearScan
 
 
 -- | Data type for register allocation.
 data Register
      = Var Unique  -- ^ Any general purpose MIPS 32 register can be allocated for this.
-     | Reg Integer -- ^ Specific register reserved.
+     | Reg Int -- ^ Specific register reserved.
      deriving (Show, Eq)
 
 -- | Indicates a register that we write to.
@@ -46,12 +50,23 @@ type Dest = Register
 -- | Indicates a register that we read from.
 type Source = Register
 
+-- | Turn a register into a VarInfo
+{-
+toVarInfo :: Register -> VarInfo
+toVarInfo (Var id) = VarInfo (Right $ uniqueToInt id) 
+-}
+
+-- | Convert a Unique value to an Int.
+uniqueToInt :: Unique -> Int
+uniqueToInt = unsafeCoerce
+
 -- | Immediate values in MIPS.
 type Immediate = Integer
 
 -- | Data type representing MIPS instructions.
 data Inst e x where
     LABEL :: Label -> String -> Int -> Inst C O
+    BLANK_LABEL :: Label -> Inst C O
     ADD :: Dest -> Source -> Source -> Inst O O
     ADDU :: Dest -> Source -> Source -> Inst O O
     ADDI :: Dest -> Source -> Immediate -> Inst O O
@@ -74,6 +89,19 @@ deriving instance Eq (Inst e x)
 instance NonLocal Inst where
   entryLabel (LABEL l _ _) = l
   successors (JMP l) = [l]
+
+instance HooplNode Inst where
+  mkBranchNode = JMP
+  mkLabelNode = BLANK_LABEL
+
+instance NodeAlloc Inst Inst where
+  isCall _ = False
+  isBranch (JMP _) = True
+  retargetBranch (JMP _) _ l = JMP l
+  mkLabelOp = BLANK_LABEL
+  mkJumpOp = JMP
+--  getReferences (ADD d s t) = [d, s, t]
+  getReferences _ = []
 
 
 -- | MIPS assembly is essentially a list of instructions, which is what
