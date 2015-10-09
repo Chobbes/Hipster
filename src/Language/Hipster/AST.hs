@@ -51,10 +51,9 @@ type Dest = Register
 type Source = Register
 
 -- | Turn a register into a VarInfo
-{-
 toVarInfo :: Register -> VarInfo
-toVarInfo (Var id) = VarInfo (Right $ uniqueToInt id) 
--}
+toVarInfo (Var id) = VarInfo (Right $ uniqueToInt id) Temp False
+toVarInfo (Reg id) = VarInfo (Left id) Temp True
 
 -- | Convert a Unique value to an Int.
 uniqueToInt :: Unique -> Int
@@ -96,11 +95,18 @@ instance HooplNode Inst where
 
 instance NodeAlloc Inst Inst where
   isCall _ = False
+  
   isBranch (JMP _) = True
+  
   retargetBranch (JMP _) _ l = JMP l
+  
   mkLabelOp = BLANK_LABEL
+  
   mkJumpOp = JMP
---  getReferences (ADD d s t) = [d, s, t]
+  
+  getReferences (ADD d s t) = map toVarInfo [d, s, t]
+  getReferences (ADDU d s t) = map toVarInfo [d, s, t]
+  getReferences (ADDI d s _) = map toVarInfo [d, s]
   getReferences _ = []
 
 
