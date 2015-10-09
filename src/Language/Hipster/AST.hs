@@ -107,6 +107,14 @@ instance NodeAlloc Inst Inst where
   getReferences (ADD d s t) = map toVarInfo [d, s, t]
   getReferences (ADDU d s t) = map toVarInfo [d, s, t]
   getReferences (ADDI d s _) = map toVarInfo [d, s]
+  getReferences (SUB d s t) = map toVarInfo [d, s, t]
+  getReferences (SUBU d s t) = map toVarInfo [d, s, t]
+  getReferences (SUBI d s _) = map toVarInfo [d, s]
+  getReferences (MULT a b) = map toVarInfo [a, b]
+  getReferences (MULTU a b) = map toVarInfo [a, b]
+  getReferences (DIV a b) = map toVarInfo [a, b]
+  getReferences (DIVU a b) = map toVarInfo [a, b]
+  getReferences (INLINE_COMMENT i _) = getReferences i
   getReferences _ = []
 
 
