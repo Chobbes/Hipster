@@ -62,10 +62,13 @@ uniqueToInt = unsafeCoerce
 -- | Immediate values in MIPS.
 type Immediate = Integer
 
--- | Data type representing MIPS instructions.
+-- | Data type representing MIPS instructions, and comments.
 data Inst e x where
+    -- Labels
     LABEL :: Label -> String -> Int -> Inst C O
     BLANK_LABEL :: Label -> Inst C O
+
+    -- Arithmetic
     ADD :: Dest -> Source -> Source -> Inst O O
     ADDU :: Dest -> Source -> Source -> Inst O O
     ADDI :: Dest -> Source -> Immediate -> Inst O O
@@ -78,7 +81,13 @@ data Inst e x where
     MULTU :: Source -> Source -> Inst O O
     DIV :: Source -> Source -> Inst O O
     DIVU :: Source -> Source -> Inst O O
+    AND :: Dest -> Source -> Source -> Inst O O
+    ANDI :: Dest -> Source -> Immediate -> Inst O O
+
+    -- Branches and jumps
     JMP :: Label -> Inst O C
+
+    -- Comments
     COMMENT :: String -> Inst O O
     INLINE_COMMENT :: Inst e x -> String -> Inst e x
 
