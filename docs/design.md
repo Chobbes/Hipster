@@ -132,4 +132,6 @@ type Value = Either Register Immediate
 this would mean that the result of `(+)` could be an immediate value. This could be bad.
 
 ## Branch Issues
-    Branch instructions in Hipster may have to be translated to a branch followed by an unconditional jump. This lets us stick things into Hoopl much easier.
+Branch instructions in Hipster may have to be translated to a branch followed by an unconditional jump. This lets us stick things into Hoopl much easier.
+
+Probably just want to convert to relative branches and such when compiling. BLANK_LABEL can be converted into relative branch targets?
