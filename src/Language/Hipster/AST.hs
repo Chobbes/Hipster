@@ -81,11 +81,48 @@ data Inst e x where
     MULTU :: Source -> Source -> Inst O O
     DIV :: Source -> Source -> Inst O O
     DIVU :: Source -> Source -> Inst O O
+
+    -- Shifts
+    SLL :: Dest -> Source -> Immediate -> Inst O O
+    SLLV :: Dest -> Source -> Source -> Inst O O
+    SRA :: Dest -> Source -> Immediate -> Inst O O
+    SRL :: Dest -> Source -> Immediate -> Inst O O
+    SRLV :: Dest -> Source -> Source -> Inst O O
+
+    -- Logic
     AND :: Dest -> Source -> Source -> Inst O O
     ANDI :: Dest -> Source -> Immediate -> Inst O O
+    OR :: Dest -> Source -> Source -> Inst O O
+    ORI :: Dest -> Source -> Immediate -> Inst O O
+    XOR :: Dest -> Source -> Source -> Inst O O
+    XORI :: Dest -> Source -> Immediate -> Inst O O
+
+    -- Sets
+    SLT :: Dest -> Source -> Source -> Inst O O
+    SLTI :: Dest -> Source -> Immediate -> Inst O O
+    SLTU :: Dest -> Source -> Source -> Inst O O
+    SLTIU :: Dest -> Source -> Immediate -> Inst O O
 
     -- Branches and jumps
-    JMP :: Label -> Inst O C
+    J :: Label -> Inst O C
+    JAL :: Label -> Inst O C
+
+    -- Loads
+    LB :: Dest -> Immediate -> Source -> Inst O O
+    LUI :: Dest -> Immediate -> Inst O O
+    LW :: Dest -> Immediate -> Source -> Inst O O
+    MFHI :: Dest -> Inst O O
+    MFLO :: Dest -> Inst O O
+
+    -- Stores
+    SB :: Source -> Immediate -> Source -> Inst O O
+    SW :: Source -> Immediate -> Source -> Inst O O
+
+    -- Noop
+    NOOP :: Inst O O
+
+    -- System calls
+    SYSCALL :: Inst O O
 
     -- Comments
     COMMENT :: String -> Inst O O
@@ -96,22 +133,22 @@ deriving instance Eq (Inst e x)
 
 instance NonLocal Inst where
   entryLabel (LABEL l _ _) = l
-  successors (JMP l) = [l]
+  successors (J l) = [l]
 
 instance HooplNode Inst where
-  mkBranchNode = JMP
+  mkBranchNode = J
   mkLabelNode = BLANK_LABEL
 
 instance NodeAlloc Inst Inst where
   isCall _ = False
   
-  isBranch (JMP _) = True
+  isBranch (J _) = True
   
-  retargetBranch (JMP _) _ l = JMP l
+  retargetBranch (J _) _ l = J l
   
   mkLabelOp = BLANK_LABEL
   
-  mkJumpOp = JMP
+  mkJumpOp = J
   
   getReferences (ADD d s t) = map toVarInfo [d, s, t]
   getReferences (ADDU d s t) = map toVarInfo [d, s, t]
@@ -163,7 +200,7 @@ sub :: Dest -> Source -> Source -> MipsBlock Register
 sub d s t = liftF (SUB d s t, d)
 
 jmp :: Label -> MipsBlock (Inst O C)
-jmp l = return $ JMP l
+jmp l = return $ J l
 
 
 -- | Keeps track of label numbers, and unique Hoopl labelings.
