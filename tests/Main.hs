@@ -23,7 +23,10 @@
 import Test.Hspec
 import Compiler.Hoopl
 import Language.Hipster.AST
+import Language.Hipster.Instructions
+import Language.Hipster.Language
 import Control.Monad
+
 
 main :: IO ()
 main = do putStrLn . showGraph show $ runSimpleUniqueMonad . compileProg $ labelTest
@@ -38,32 +41,32 @@ main = do putStrLn . showGraph show $ runSimpleUniqueMonad . compileProg $ label
                              , ADD (Var 7) (Var 8) (Var 9)]
                 in comp `shouldBe` insts
 
-labelTest :: MipsProgram ()
+labelTest :: MipsProgram Register ()
 labelTest = mdo l1 <- newBB "l1" $ do
                   res <- newVar
                   x <- newVar
                   y <- newVar
                   add res x y
-                  jmp l1
+                  j l1
                 l2 <- newBB "l2" $ do
                   res <- newVar
                   x <- newVar
                   y <- newVar
                   sub res x y
-                  jmp l1
+                  j l1
                 return ()
 
-labelTest' :: MipsProgram ()
+labelTest' :: MipsProgram Register ()
 labelTest' = mdo l1 <- newBB "l1" $ do
                    res <- newVar
                    x <- newVar
                    y <- newVar
                    add res x y
-                   jmp l2
+                   j l2
                  l2 <- newBB "l2" $ do
                    res <- newVar
                    x <- newVar
                    y <- newVar
                    sub res x y
-                   jmp l1
+                   j l1
                  return ()
