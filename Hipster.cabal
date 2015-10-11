@@ -18,14 +18,16 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     Language.Hipster.AST
-  build-depends:       base >=4.7 && <4.9,
-                       hoopl >=3.10 && <3.11,
-                       free >=4.12 && <4.13,
-                       transformers >=0.4 && <0.5,
-                       mtl >=2.2 && <2.3,
-                       containers >=0.5 && <0.6,
-                       linearscan-hoopl >= 0.11 && <0.12,
-                       linearscan >= 0.11.1 && <0.12
+                     , Language.Hipster.Instructions
+                     , Language.Hipster.Language
+  build-depends:       base >=4.7 && <4.9
+                     , hoopl >=3.10 && <3.11
+                     , free >=4.12 && <4.13
+                     , transformers >=0.4 && <0.5
+                     , mtl >=2.2 && <2.3
+                     , containers >=0.5 && <0.6
+                     , linearscan-hoopl >= 0.11 && <0.12
+                     , linearscan >= 0.11.1 && <0.12
   hs-source-dirs:      src
   default-language:    Haskell2010
 
@@ -33,8 +35,8 @@ test-suite tests
   main-is: Main.hs
   hs-source-dirs: tests
   type: exitcode-stdio-1.0
-  build-depends: base >=4.7 && <4.9,
-                 hspec >= 2.1 && <2.3,
-                 hoopl >=3.10 && <3.11,
-                 Hipster
+  build-depends: base >=4.7 && <4.9
+               , hspec >= 2.1 && <2.3
+               , hoopl >=3.10 && <3.11
+               , Hipster
   default-language: Haskell2010
