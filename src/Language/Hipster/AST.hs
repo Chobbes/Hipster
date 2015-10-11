@@ -51,9 +51,21 @@ type Dest = Register
 type Source = Register
 
 -- | Turn a register into a VarInfo
-toVarInfo :: Register -> VarInfo
-toVarInfo (Var id) = VarInfo (Right $ uniqueToInt id) Temp False
-toVarInfo (Reg id) = VarInfo (Left id) Temp True
+toVarInfo :: VarKind -> Register -> VarInfo
+toVarInfo k (Var id) = VarInfo (Right $ uniqueToInt id) k False
+toVarInfo k (Reg id) = VarInfo (Left id) k True
+
+toTemp :: Register -> VarInfo
+toTemp = toVarInfo Temp
+
+toInput :: Register -> VarInfo
+toInput = toVarInfo Input
+
+toOutput :: Register -> VarInfo
+toOutput = toVarInfo Output
+
+toInputOutput :: Register -> VarInfo
+toInputOutput = toVarInfo InputOutput
 
 -- | Convert a Unique value to an Int.
 uniqueToInt :: Unique -> Int
@@ -151,55 +163,61 @@ instance NodeAlloc Inst Inst where
   mkJumpOp = J
 
   -- Arithmetic
-  getReferences (ADD d s t) = map toVarInfo [d, s, t]
-  getReferences (ADDU d s t) = map toVarInfo [d, s, t]
-  getReferences (ADDI d s _) = map toVarInfo [d, s]
-  getReferences (ADDIU d s _) = map toVarInfo [d, s]
-  getReferences (SUB d s t) = map toVarInfo [d, s, t]
-  getReferences (SUBU d s t) = map toVarInfo [d, s, t]
-  getReferences (SUBI d s _) = map toVarInfo [d, s]
-  getReferences (SUBIU d s _) = map toVarInfo [d, s]
-  getReferences (MULT a b) = map toVarInfo [a, b]
-  getReferences (MULTU a b) = map toVarInfo [a, b]
-  getReferences (DIV a b) = map toVarInfo [a, b]
-  getReferences (DIVU a b) = map toVarInfo [a, b]
+  getReferences (ADD d s t) = instInfo d s t
+  getReferences (ADDU d s t) = instInfo d s t
+  getReferences (ADDI d s _) = immInfo d s
+  getReferences (ADDIU d s _) = immInfo d s
+  getReferences (SUB d s t) = instInfo d s t
+  getReferences (SUBU d s t) = instInfo d s t
+  getReferences (SUBI d s _) = immInfo d s
+  getReferences (SUBIU d s _) = immInfo d s
+  getReferences (MULT a b) = map toInput [a, b]
+  getReferences (MULTU a b) = map toInput [a, b]
+  getReferences (DIV a b) = map toInput [a, b]
+  getReferences (DIVU a b) = map toInput [a, b]
 
   -- Shifts
-  getReferences (SLL d s _) = map toVarInfo [d, s]
-  getReferences (SLLV d s t) = map toVarInfo [d, s, t]
-  getReferences (SRA d s _) = map toVarInfo [d, s]
-  getReferences (SRL d s _) = map toVarInfo [d, s]
-  getReferences (SRLV d s t) = map toVarInfo [d, s, t]
+  getReferences (SLL d s _) = immInfo d s
+  getReferences (SLLV d s t) = instInfo d s t
+  getReferences (SRA d s _) = immInfo d s
+  getReferences (SRL d s _) = immInfo d s
+  getReferences (SRLV d s t) = instInfo d s t
 
   -- Logic
-  getReferences (AND d s t) = map toVarInfo [d, s, t]
-  getReferences (ANDI d s _) = map toVarInfo [d, s]
-  getReferences (OR d s t) = map toVarInfo [d, s, t]
-  getReferences (ORI d s _) = map toVarInfo [d, s]
-  getReferences (XOR d s t) = map toVarInfo [d, s, t]
-  getReferences (XORI d s _) = map toVarInfo [d, s]
+  getReferences (AND d s t) = instInfo d s t
+  getReferences (ANDI d s _) = immInfo d s
+  getReferences (OR d s t) = instInfo d s t
+  getReferences (ORI d s _) = immInfo d s
+  getReferences (XOR d s t) = instInfo d s t
+  getReferences (XORI d s _) = immInfo d s
 
   -- Sets
-  getReferences (SLT d s t) = map toVarInfo [d, s, t]
-  getReferences (SLTI d s _) = map toVarInfo [d, s]
-  getReferences (SLTU d s t) = map toVarInfo [d, s, t]
-  getReferences (SLTIU d s _) = map toVarInfo [d, s]
+  getReferences (SLT d s t) = instInfo d s t
+  getReferences (SLTI d s _) = immInfo d s
+  getReferences (SLTU d s t) = instInfo d s t
+  getReferences (SLTIU d s _) = immInfo d s
 
   -- Loads
-  getReferences (LB d _ s) = map toVarInfo [d, s]
-  getReferences (LUI d _) = [toVarInfo d]
-  getReferences (LW d _ s) = map toVarInfo [d, s]
-  getReferences (MFHI d) = [toVarInfo d]
-  getReferences (MFLO d) = [toVarInfo d]
+  getReferences (LB d _ s) = immInfo d s
+  getReferences (LUI d _) = [toOutput d]
+  getReferences (LW d _ s) = immInfo d s
+  getReferences (MFHI d) = [toOutput d]
+  getReferences (MFLO d) = [toOutput d]
 
   -- Stores
-  getReferences (SB a _ b) = map toVarInfo [a, b]
-  getReferences (SW a _ b) = map toVarInfo [a, b]
+  getReferences (SB a _ b) = immInfo a b
+  getReferences (SW a _ b) = immInfo a b
 
   -- Misc
   getReferences (INLINE_COMMENT i _) = getReferences i
   getReferences _ = []
 
+
+instInfo :: Register -> Register -> Register -> [VarInfo]
+instInfo d s t = [toOutput d, toInput s, toInput t]
+
+immInfo :: Register -> Register -> [VarInfo]
+immInfo d s = [toOutput d, toInput s]
 
 -- | MIPS assembly is essentially a list of instructions, which is what
 -- the Free monad gives us.
