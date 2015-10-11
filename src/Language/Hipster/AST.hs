@@ -149,7 +149,8 @@ instance NodeAlloc Inst Inst where
   mkLabelOp = BLANK_LABEL
   
   mkJumpOp = J
-  
+
+  -- Arithmetic
   getReferences (ADD d s t) = map toVarInfo [d, s, t]
   getReferences (ADDU d s t) = map toVarInfo [d, s, t]
   getReferences (ADDI d s _) = map toVarInfo [d, s]
@@ -162,6 +163,40 @@ instance NodeAlloc Inst Inst where
   getReferences (MULTU a b) = map toVarInfo [a, b]
   getReferences (DIV a b) = map toVarInfo [a, b]
   getReferences (DIVU a b) = map toVarInfo [a, b]
+
+  -- Shifts
+  getReferences (SLL d s _) = map toVarInfo [d, s]
+  getReferences (SLLV d s t) = map toVarInfo [d, s, t]
+  getReferences (SRA d s _) = map toVarInfo [d, s]
+  getReferences (SRL d s _) = map toVarInfo [d, s]
+  getReferences (SRLV d s t) = map toVarInfo [d, s, t]
+
+  -- Logic
+  getReferences (AND d s t) = map toVarInfo [d, s, t]
+  getReferences (ANDI d s _) = map toVarInfo [d, s]
+  getReferences (OR d s t) = map toVarInfo [d, s, t]
+  getReferences (ORI d s _) = map toVarInfo [d, s]
+  getReferences (XOR d s t) = map toVarInfo [d, s, t]
+  getReferences (XORI d s _) = map toVarInfo [d, s]
+
+  -- Sets
+  getReferences (SLT d s t) = map toVarInfo [d, s, t]
+  getReferences (SLTI d s _) = map toVarInfo [d, s]
+  getReferences (SLTU d s t) = map toVarInfo [d, s, t]
+  getReferences (SLTIU d s _) = map toVarInfo [d, s]
+
+  -- Loads
+  getReferences (LB d _ s) = map toVarInfo [d, s]
+  getReferences (LUI d _) = [toVarInfo d]
+  getReferences (LW d _ s) = map toVarInfo [d, s]
+  getReferences (MFHI d) = [toVarInfo d]
+  getReferences (MFLO d) = [toVarInfo d]
+
+  -- Stores
+  getReferences (SB a _ b) = map toVarInfo [a, b]
+  getReferences (SW a _ b) = map toVarInfo [a, b]
+
+  -- Misc
   getReferences (INLINE_COMMENT i _) = getReferences i
   getReferences _ = []
 
