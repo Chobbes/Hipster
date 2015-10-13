@@ -26,11 +26,19 @@ import Language.Hipster.AST
 import Language.Hipster.Instructions
 import Language.Hipster.Language
 import Control.Monad
+import LinearScan.Hoopl
+import LinearScan
+import Unsafe.Coerce
 
+
+printAllocRes :: (String, Either [String] (Graph (Inst Register) C C)) -> IO ()
+printAllocRes (str, Right g) = print str >> putStrLn (showGraph show g)
+printAllocRes (str, Left fails) = print str >> print fails
 
 main :: IO ()
 main = do putStrLn . showGraph show $ runSimpleUniqueMonad . compileProg $ labelTest
           putStrLn . showGraph show $ runSimpleUniqueMonad . compileProg $ labelTest'
+          printAllocRes . allocateHoopl 5 0 4 VerifyDisabled (unsafeCoerce (1 :: Int)) $ runSimpleUniqueMonad . compileProg $ labelTest'
           hspec $
             describe "AST var test" $
               it "newVar composition test" $
@@ -62,6 +70,7 @@ labelTest' = mdo l1 <- newBB "l1" $ do
                    x <- newVar
                    y <- newVar
                    add res x y
+                   add res res x
                    j l2
                  l2 <- newBB "l2" $ do
                    res <- newVar

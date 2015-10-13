@@ -263,7 +263,10 @@ instance NodeAlloc (Inst Register) (Inst Register) where
   setRegisters m (INLINE_COMMENT i str) = do setI <- setRegisters m i
                                              return $ INLINE_COMMENT setI str
 
-  setRegisters _ _ = error "Unimplemented setRegisters"
+  setRegisters _ l@(LABEL _ _ _) = return l
+  setRegisters _ j@(J _) = return j
+
+  setRegisters _ n = error $ "Unimplemented setRegisters: " ++ show n
 
 
   mkMoveOps source _ dest = return [ADDI (Reg dest) (Reg source) 0]
