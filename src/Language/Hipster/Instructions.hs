@@ -26,8 +26,9 @@
 module Language.Hipster.Instructions where
 
 import Compiler.Hoopl
-import LinearScan.Hoopl
 import LinearScan
+import LinearScan.Hoopl
+import LinearScan.Hoopl.DSL (getStackSlot)
 import Unsafe.Coerce
 import Data.Maybe
 
@@ -211,7 +212,6 @@ instance NodeAlloc (Inst Register) (Inst Register) where
 
 
   setRegisters m (ADD d s t) = return $ dstSet m ADD d s t
-  setRegisters m (ADD d s t) = return $ dstSet m ADD d s t
   setRegisters m (ADDU d s t) = return $ dstSet m ADDU d s t
   setRegisters m (ADDI d s i) = return $ immSet m ADDI d s i
   setRegisters m (ADDIU d s i) = return $ immSet m ADDIU d s i
@@ -262,8 +262,19 @@ instance NodeAlloc (Inst Register) (Inst Register) where
   -- Misc
   setRegisters m (INLINE_COMMENT i str) = do setI <- setRegisters m i
                                              return $ INLINE_COMMENT setI str
+
   setRegisters _ _ = error "Unimplemented setRegisters"
 
+
+  mkMoveOps source _ dest = return [ADDI (Reg dest) (Reg source) 0]
+
+  mkSaveOps source id = do offset <- getStackSlot (Just id)
+                           return [SW (Reg source) (fromIntegral offset) (Reg 29)]
+
+  mkRestoreOps id dest = do offset <- getStackSlot (Just id)
+                            return [LW (Reg dest) (fromIntegral offset) (Reg 29)]
+
+  op1ToString = show
 
 dstSet :: [((VarId, VarKind), PhysReg)] -> (Register -> Register -> Register -> Inst Register e x) -> Register -> Register -> Register -> Inst Register e x
 dstSet m n d s t = n (regSetOut m d) (regSetIn m s) (regSetIn m t)
