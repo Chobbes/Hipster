@@ -260,7 +260,8 @@ instance NodeAlloc (Inst Register) (Inst Register) where
   setRegisters m (SW a o b) = return $ SW (regSetIn m a) o (regSetIn m b)
 
   -- Misc
-  setRegisters m (INLINE_COMMENT i _) = setRegisters m i
+  setRegisters m (INLINE_COMMENT i str) = do setI <- setRegisters m i
+                                             return $ INLINE_COMMENT setI str
   setRegisters _ _ = error "Unimplemented setRegisters"
 
 
