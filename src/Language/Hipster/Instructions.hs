@@ -29,6 +29,7 @@ import Compiler.Hoopl
 import LinearScan.Hoopl
 import LinearScan
 import Unsafe.Coerce
+import Data.Maybe
 
 
 -- | Data type for register allocation.
@@ -201,13 +202,89 @@ instance NodeAlloc (Inst Register) (Inst Register) where
   getReferences (MFLO d) = [toOutput d]
 
   -- Stores
-  getReferences (SB a _ b) = immInfo a b
-  getReferences (SW a _ b) = immInfo a b
+  getReferences (SB a _ b) = map toInput [a, b]
+  getReferences (SW a _ b) = map toInput [a, b]
 
   -- Misc
   getReferences (INLINE_COMMENT i _) = getReferences i
   getReferences _ = []
 
+
+  setRegisters m (ADD d s t) = return $ dstSet m ADD d s t
+  setRegisters m (ADD d s t) = return $ dstSet m ADD d s t
+  setRegisters m (ADDU d s t) = return $ dstSet m ADDU d s t
+  setRegisters m (ADDI d s i) = return $ immSet m ADDI d s i
+  setRegisters m (ADDIU d s i) = return $ immSet m ADDIU d s i
+  setRegisters m (SUB d s t) = return $ dstSet m SUB d s t
+  setRegisters m (SUBU d s t) = return $ dstSet m SUBU d s t
+  setRegisters m (SUBI d s i) = return $ immSet m SUBI d s i
+  setRegisters m (SUBIU d s i) = return $ immSet m SUBIU d s i
+  setRegisters m (MULT a b) = return $ MULT (regSetIn m a) (regSetIn m b)
+  setRegisters m (MULTU a b) = return $ MULTU (regSetIn m a) (regSetIn m b)
+  setRegisters m (DIV a b) = return $ DIV (regSetIn m a) (regSetIn m b)
+  setRegisters m (DIVU a b) = return $ DIVU (regSetIn m a) (regSetIn m b)
+
+  -- Shifts
+  setRegisters m (SLL d s i) = return $ immSet m SLL d s i
+  setRegisters m (SLLV d s t) = return $ dstSet m SLLV d s t
+  setRegisters m (SRA d s i) = return $ immSet m SRA d s i
+  setRegisters m (SRL d s i) = return $ immSet m SRL d s i
+  setRegisters m (SRLV d s t) = return $ dstSet m SRLV d s t
+
+  -- Logic
+  setRegisters m (AND d s t) = return $ dstSet m AND d s t
+  setRegisters m (ANDI d s i) = return $ immSet m ANDI d s i
+  setRegisters m (OR d s t) = return $ dstSet m OR d s t
+  setRegisters m (ORI d s i) = return $ immSet m ORI d s i
+  setRegisters m (XOR d s t) = return $ dstSet m XOR d s t
+  setRegisters m (XORI d s i) = return $ immSet m XORI d s i
+
+  -- Sets
+  setRegisters m (SLT d s t) = return $ dstSet m SLT d s t
+  setRegisters m (SLTI d s i) = return $ immSet m SLTI d s i
+  setRegisters m (SLTU d s t) = return $ dstSet m SLTU d s t
+  setRegisters m (SLTIU d s i) = return $ immSet m SLTIU d s i
+
+  -- Branches and jumps
+  -- setRegisters m (JAL _) = -- $ra
+
+  -- Loads
+  setRegisters m (LB d o s) = return $ LB (regSetOut m d) o (regSetIn m s)
+  setRegisters m (LUI d i) = return $ LUI (regSetOut m d) i
+  setRegisters m (LW d o s) = return $ LW (regSetOut m d) o (regSetIn m s)
+  setRegisters m (MFHI d) = return $ MFHI (regSetOut m d)
+  setRegisters m (MFLO d) = return $ MFLO (regSetOut m d)
+
+  -- Stores
+  setRegisters m (SB a o b) = return $ SB (regSetIn m a) o (regSetIn m b)
+  setRegisters m (SW a o b) = return $ SW (regSetIn m a) o (regSetIn m b)
+
+  -- Misc
+  setRegisters m (INLINE_COMMENT i _) = setRegisters m i
+  setRegisters _ _ = error "Unimplemented setRegisters"
+
+
+dstSet :: [((VarId, VarKind), PhysReg)] -> (Register -> Register -> Register -> Inst Register e x) -> Register -> Register -> Register -> Inst Register e x
+dstSet m n d s t = n (regSetOut m d) (regSetIn m s) (regSetIn m t)
+
+immSet :: [((VarId, VarKind), PhysReg)] -> (Register -> Register -> Immediate -> Inst Register e x) -> Register -> Register -> Immediate -> Inst Register e x
+immSet m n d s i = n (regSetOut m d) (regSetIn m s) i
+
+uncurry3 :: (a -> b -> c -> d) -> ((a, b, c) -> d)
+uncurry3 f = (\(a, b, c) -> f a b c)
+
+regSet :: VarKind -> [((VarId, VarKind), PhysReg)] -> Register -> Register
+regSet k m (Reg id) = Reg id
+regSet k m (Var id) = Reg . fromJust $ lookup (id, k) m
+
+regSetOut :: [((VarId, VarKind), PhysReg)] -> Register -> Register
+regSetOut = regSet Output
+
+regSetIn :: [((VarId, VarKind), PhysReg)] -> Register -> Register
+regSetIn = regSet Input
+
+regSetTemp :: [((VarId, VarKind), PhysReg)] -> Register -> Register
+regSetTemp = regSet Temp
 
 instInfo :: Register -> Register -> Register -> [VarInfo]
 instInfo d s t = [toOutput d, toInput s, toInput t]
