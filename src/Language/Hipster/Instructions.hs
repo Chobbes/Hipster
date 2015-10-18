@@ -37,7 +37,26 @@ import Data.Maybe
 data Register
      = Var Unique  -- ^ Any general purpose MIPS 32 register can be allocated for this.
      | Reg Int -- ^ Specific register reserved.
-     deriving (Show, Eq)
+     deriving (Eq)
+
+instance Show Register where
+  show (Var n) = "(Var " ++ show n ++ ")"
+  show (Reg n)
+    | n == 0 = "$zero"
+    | n == 1 = "$at"
+    | n == 2 = "$v0"
+    | n == 3 = "$v1"
+    | n >= 4 && n <= 7 = "$a" ++ show (n - 4)
+    | n >= 8 && n <= 15 = "$t" ++ show (n - 8)
+    | n >= 16 && n <= 23 = "$s" ++ show (n - 16)
+    | n == 24 = "$t8"
+    | n == 25 = "$t9"
+    | n == 26 = "$k0"
+    | n == 27 = "$k1"
+    | n == 28 = "$gp"
+    | n == 29 = "$sp"
+    | n == 30 = "$fp"
+    | n == 31 = "$ra"
 
 -- | Indicates a register that we write to.
 type Dest = Register
@@ -127,7 +146,7 @@ instance HooplNode (Inst v) where
 
 -- | Turn a register into a VarInfo
 toVarInfo :: VarKind -> Register -> VarInfo
-toVarInfo k (Var id) = VarInfo (Right $ uniqueToInt id) k False
+toVarInfo k (Var id) = VarInfo (Right $ uniqueToInt id) k True
 toVarInfo k (Reg id) = VarInfo (Left id) k True
 
 toTemp :: Register -> VarInfo
