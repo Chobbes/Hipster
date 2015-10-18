@@ -32,13 +32,13 @@ import Unsafe.Coerce
 
 
 printAllocRes :: (String, Either [String] (Graph (Inst Register) C C)) -> IO ()
-printAllocRes (str, Right g) = print str >> putStrLn (showGraph show g)
-printAllocRes (str, Left fails) = print str >> print fails
+printAllocRes (str, Right g) = putStrLn str >> putStrLn (showGraph show g)
+printAllocRes (str, Left fails) = putStrLn str >> print fails
 
 main :: IO ()
 main = do putStrLn . showGraph show $ runSimpleUniqueMonad . compileProg $ labelTest
           putStrLn . showGraph show $ runSimpleUniqueMonad . compileProg $ labelTest'
-          printAllocRes . allocateHoopl 5 0 4 VerifyDisabled (unsafeCoerce (1 :: Int)) $ runSimpleUniqueMonad . compileProg $ labelTest'
+          printAllocRes . allocateHoopl 5 0 4 VerifyEnabled (unsafeCoerce (1 :: Int)) $ runSimpleUniqueMonad . compileProg $ labelTest'
           hspec $
             describe "AST var test" $
               it "newVar composition test" $
@@ -69,13 +69,27 @@ labelTest' = mdo l1 <- newBB "l1" $ do
                    res <- newVar
                    x <- newVar
                    y <- newVar
+                   z <- newVar
+                   w <- newVar
+                   u <- newVar
+                   lui x 1
+                   lui y 2
+                   lui z 3
+                   lui w 4
+                   lui u 5
                    add res x y
                    add res res x
+                   add res res y
+                   add res res z
+                   add res res w
+                   add res res u
                    j l2
                  l2 <- newBB "l2" $ do
                    res <- newVar
                    x <- newVar
                    y <- newVar
+                   lui x 3
+                   lui y 4
                    sub res x y
                    j l1
                  return ()
