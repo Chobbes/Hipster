@@ -55,54 +55,54 @@ data Inst v e x where
     BLANK_LABEL :: Label -> Inst v C O
 
     -- Arithmetic
-    ADD :: Dest -> Source -> Source -> Inst v O O
-    ADDU :: Dest -> Source -> Source -> Inst v O O
-    ADDI :: Dest -> Source -> Immediate -> Inst v O O
-    ADDIU :: Dest -> Source -> Immediate -> Inst v O O
-    SUB :: Dest -> Source -> Source -> Inst v O O
-    SUBU :: Dest -> Source -> Source -> Inst v O O
-    SUBI :: Dest -> Source -> Immediate -> Inst v O O
-    SUBIU :: Dest -> Source -> Immediate -> Inst v O O
-    MULT :: Source -> Source -> Inst v O O
-    MULTU :: Source -> Source -> Inst v O O
-    DIV :: Source -> Source -> Inst v O O
-    DIVU :: Source -> Source -> Inst v O O
+    ADD :: v -> v -> v -> Inst v O O
+    ADDU :: v -> v -> v -> Inst v O O
+    ADDI :: v -> v -> Immediate -> Inst v O O
+    ADDIU :: v -> v -> Immediate -> Inst v O O
+    SUB :: v -> v -> v -> Inst v O O
+    SUBU :: v -> v -> v -> Inst v O O
+    SUBI :: v -> v -> Immediate -> Inst v O O
+    SUBIU :: v -> v -> Immediate -> Inst v O O
+    MULT :: v -> v -> Inst v O O
+    MULTU :: v -> v -> Inst v O O
+    DIV :: v -> v -> Inst v O O
+    DIVU :: v -> v -> Inst v O O
 
     -- Shifts
-    SLL :: Dest -> Source -> Immediate -> Inst v O O
-    SLLV :: Dest -> Source -> Source -> Inst v O O
-    SRA :: Dest -> Source -> Immediate -> Inst v O O
-    SRL :: Dest -> Source -> Immediate -> Inst v O O
-    SRLV :: Dest -> Source -> Source -> Inst v O O
+    SLL :: v -> v -> Immediate -> Inst v O O
+    SLLV :: v -> v -> v -> Inst v O O
+    SRA :: v -> v -> Immediate -> Inst v O O
+    SRL :: v -> v -> Immediate -> Inst v O O
+    SRLV :: v -> v -> v -> Inst v O O
 
     -- Logic
-    AND :: Dest -> Source -> Source -> Inst v O O
-    ANDI :: Dest -> Source -> Immediate -> Inst v O O
-    OR :: Dest -> Source -> Source -> Inst v O O
-    ORI :: Dest -> Source -> Immediate -> Inst v O O
-    XOR :: Dest -> Source -> Source -> Inst v O O
-    XORI :: Dest -> Source -> Immediate -> Inst v O O
+    AND :: v -> v -> v -> Inst v O O
+    ANDI :: v -> v -> Immediate -> Inst v O O
+    OR :: v -> v -> v -> Inst v O O
+    ORI :: v -> v -> Immediate -> Inst v O O
+    XOR :: v -> v -> v -> Inst v O O
+    XORI :: v -> v -> Immediate -> Inst v O O
 
     -- Sets
-    SLT :: Dest -> Source -> Source -> Inst v O O
-    SLTI :: Dest -> Source -> Immediate -> Inst v O O
-    SLTU :: Dest -> Source -> Source -> Inst v O O
-    SLTIU :: Dest -> Source -> Immediate -> Inst v O O
+    SLT :: v -> v -> v -> Inst v O O
+    SLTI :: v -> v -> Immediate -> Inst v O O
+    SLTU :: v -> v -> v -> Inst v O O
+    SLTIU :: v -> v -> Immediate -> Inst v O O
 
     -- Branches and jumps
     J :: Label -> Inst v O C
     JAL :: Label -> Inst v O C
 
     -- Loads
-    LB :: Dest -> Immediate -> Source -> Inst v O O
-    LUI :: Dest -> Immediate -> Inst v O O
-    LW :: Dest -> Immediate -> Source -> Inst v O O
-    MFHI :: Dest -> Inst v O O
-    MFLO :: Dest -> Inst v O O
+    LB :: v -> Immediate -> v -> Inst v O O
+    LUI :: v -> Immediate -> Inst v O O
+    LW :: v -> Immediate -> v -> Inst v O O
+    MFHI :: v -> Inst v O O
+    MFLO :: v -> Inst v O O
 
     -- Stores
-    SB :: Source -> Immediate -> Source -> Inst v O O
-    SW :: Source -> Immediate -> Source -> Inst v O O
+    SB :: v -> Immediate -> v -> Inst v O O
+    SW :: v -> Immediate -> v -> Inst v O O
 
     -- Noop
     NOOP :: Inst v O O
@@ -114,8 +114,8 @@ data Inst v e x where
     COMMENT :: String -> Inst v O O
     INLINE_COMMENT :: Inst v e x -> String -> Inst v e x
 
-deriving instance Show (Inst v e x)
-deriving instance Eq (Inst v e x)
+deriving instance (Show v) => Show (Inst v e x)
+deriving instance (Eq v) => Eq (Inst v e x)
 
 instance NonLocal (Inst v) where
   entryLabel (LABEL l _ _) = l
@@ -288,9 +288,11 @@ immSet m n d s i = n (regSetOut m d) (regSetIn m s) i
 uncurry3 :: (a -> b -> c -> d) -> ((a, b, c) -> d)
 uncurry3 f = (\(a, b, c) -> f a b c)
 
+deriving instance Show VarKind
+
 regSet :: VarKind -> [((VarId, VarKind), PhysReg)] -> Register -> Register
 regSet k m (Reg id) = Reg id
-regSet k m (Var id) = Reg . fromJust $ lookup (id, k) m
+regSet k m (Var id) = Reg . fromMaybe (-1) {-(error $ "id: " ++ show id ++ ", kind: " ++ show k ++ ", m: " ++ show m) -} $ lookup (id, k) m
 
 regSetOut :: [((VarId, VarKind), PhysReg)] -> Register -> Register
 regSetOut = regSet Output
