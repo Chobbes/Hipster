@@ -50,21 +50,20 @@ instance Num (MipsBlock Register Register) where
                  mult r1 r2
                  mflo res
 
-  negate b1 = do r1 <- b1
-                 res <- newVar
-                 sub res (Reg 0) r1
+  negate b = do r <- b
+                res <- newVar
+                sub res (Reg 0) r
 
-  
-{-
+  abs b = do r <- b
+             temp <- newVar
+             sra temp r 31
+             xor r temp r
+             sub temp temp r
 
-Want to be able to just do this...
-
-y <- newVar
-lui y 32
-x <- 2 * 3 + y
-
-Which means 2 * 3 + y :: MipsBlock Register Register
-
-Which is not ideal :(.
-
--}
+  signum b = do r <- b
+                sign <- newVar
+                temp <- newVar
+                sra sign r 31 -- This gets us the sign bit.
+                slti temp r 1 -- 1 if <=0
+                xori temp temp 1 -- 1 if >0, 0 otherwise
+                Language.Hipster.Language.or sign temp sign
