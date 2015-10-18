@@ -26,7 +26,7 @@
 module Language.Hipster.Expressions where
 
 import Language.Hipster.Instructions
-import Language.Hipster.Language
+import Language.Hipster.Language as L
 import Language.Hipster.AST
 
 
@@ -63,7 +63,6 @@ instance Num (MipsBlock Register Register) where
   signum b = do r <- b
                 sign <- newVar
                 temp <- newVar
-                sra sign r 31 -- This gets us the sign bit.
-                slti temp r 1 -- 1 if <=0
-                xori temp temp 1 -- 1 if >0, 0 otherwise
-                Language.Hipster.Language.or sign temp sign
+                sra sign r 31  -- This gets us the sign bit.
+                slt temp (Reg 0) r  -- 1 if 0 < r
+                L.or sign temp sign
