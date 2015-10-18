@@ -25,6 +25,7 @@ import Compiler.Hoopl
 import Language.Hipster.AST
 import Language.Hipster.Instructions
 import Language.Hipster.Language
+import Language.Hipster.Expressions
 import Control.Monad
 import LinearScan.Hoopl
 import LinearScan
@@ -38,6 +39,7 @@ printAllocRes (str, Left fails) = putStrLn str >> print fails
 main :: IO ()
 main = do putStrLn . showGraph show $ runSimpleUniqueMonad . compileProg $ labelTest
           putStrLn . showGraph show $ runSimpleUniqueMonad . compileProg $ labelTest'
+          putStrLn . showGraph show $ runSimpleUniqueMonad . compileProg $ numTest
           printAllocRes . allocateHoopl 5 0 4 VerifyEnabled (unsafeCoerce (1 :: Int)) $ runSimpleUniqueMonad . compileProg $ labelTest'
           hspec $
             describe "AST var test" $
@@ -93,3 +95,10 @@ labelTest' = mdo l1 <- newBB "l1" $ do
                    sub res x y
                    j l1
                  return ()
+
+numTest :: MipsProgram Register ()
+numTest = mdo l1 <- newBB "l1" $ do
+                2 + newVar * newVar
+                2 + 3 * 7 :: MipsBlock Register Register
+                j l1
+              return ()

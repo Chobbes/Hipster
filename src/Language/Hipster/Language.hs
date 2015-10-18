@@ -163,3 +163,11 @@ syscall = liftF (SYSCALL, ())
 comment :: String -> MipsBlock Register ()
 comment str = liftF (COMMENT str, ())
 
+-- Pseudoinstructions
+move :: Dest -> Source -> MipsBlock Register Register
+move d s = addi d s 0
+
+li :: Dest -> Immediate -> MipsBlock Register Register
+li d i
+  | i < 2^16 = ori d (Reg 0) i
+  | otherwise = lui d (i `Prelude.div` 2^16) >> ori d d (i `mod` 2^16)
