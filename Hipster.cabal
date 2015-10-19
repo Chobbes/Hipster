@@ -21,6 +21,7 @@ library
                      , Language.Hipster.Instructions
                      , Language.Hipster.Language
                      , Language.Hipster.Expressions
+                     , Language.Hipster.Registers
   build-depends:       base >=4.7 && <4.9
                      , hoopl >=3.10 && <3.11
                      , free >=4.12 && <4.13

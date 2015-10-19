@@ -21,6 +21,7 @@
 module Language.Hipster.Language where
 
 import Language.Hipster.AST
+import Language.Hipster.Registers
 import Language.Hipster.Instructions
 import Control.Monad.Trans.Free
 import Control.Monad.Trans.Class
@@ -169,5 +170,5 @@ move d s = addi d s 0
 
 li :: Dest -> Immediate -> MipsBlock Register Register
 li d i
-  | i < 2^16 = ori d (Reg 0) i
+  | i < 2^16 = ori d zero i
   | otherwise = lui d (i `Prelude.div` 2^16) >> ori d d (i `mod` 2^16)

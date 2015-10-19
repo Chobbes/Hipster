@@ -26,6 +26,7 @@
 module Language.Hipster.Expressions where
 
 import Language.Hipster.Instructions
+import Language.Hipster.Registers
 import Language.Hipster.Language as L
 import Language.Hipster.AST
 
@@ -52,7 +53,7 @@ instance Num (MipsBlock Register Register) where
 
   negate b = do r <- b
                 res <- newVar
-                sub res (Reg 0) r
+                sub res zero r
 
   abs b = do r <- b
              temp <- newVar
@@ -64,5 +65,5 @@ instance Num (MipsBlock Register Register) where
                 sign <- newVar
                 temp <- newVar
                 sra sign r 31  -- This gets us the sign bit.
-                slt temp (Reg 0) r  -- 1 if 0 < r
+                slt temp zero r  -- 1 if 0 < r
                 L.or sign temp sign

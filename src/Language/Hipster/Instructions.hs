@@ -25,6 +25,7 @@
 
 module Language.Hipster.Instructions where
 
+import Language.Hipster.Registers
 import Compiler.Hoopl
 import LinearScan
 import LinearScan.Hoopl
@@ -32,40 +33,6 @@ import LinearScan.Hoopl.DSL (getStackSlot)
 import Unsafe.Coerce
 import Data.Maybe
 
-
--- | Data type for register allocation.
-data Register
-     = Var Unique  -- ^ Any general purpose MIPS 32 register can be allocated for this.
-     | Reg Int -- ^ Specific register reserved.
-     deriving (Eq)
-
-instance Show Register where
-  show (Var n) = "(Var " ++ show n ++ ")"
-  show (Reg n)
-    | n == 0 = "$zero"
-    | n == 1 = "$at"
-    | n == 2 = "$v0"
-    | n == 3 = "$v1"
-    | n >= 4 && n <= 7 = "$a" ++ show (n - 4)
-    | n >= 8 && n <= 15 = "$t" ++ show (n - 8)
-    | n >= 16 && n <= 23 = "$s" ++ show (n - 16)
-    | n == 24 = "$t8"
-    | n == 25 = "$t9"
-    | n == 26 = "$k0"
-    | n == 27 = "$k1"
-    | n == 28 = "$gp"
-    | n == 29 = "$sp"
-    | n == 30 = "$fp"
-    | n == 31 = "$ra"
-
--- | Indicates a register that we write to.
-type Dest = Register
-
--- | Indicates a register that we read from.
-type Source = Register
-
--- | Immediate values in MIPS.
-type Immediate = Integer
 
 -- | Data type representing MIPS instructions, and comments.
 data Inst v e x where
@@ -291,10 +258,10 @@ instance NodeAlloc (Inst Register) (Inst Register) where
   mkMoveOps source _ dest = return [ADDI (Reg dest) (Reg source) 0]
 
   mkSaveOps source id = do offset <- getStackSlot (Just id)
-                           return [SW (Reg source) (fromIntegral offset) (Reg 29)]
+                           return [SW (Reg source) (fromIntegral offset) sp]
 
   mkRestoreOps id dest = do offset <- getStackSlot (Just id)
-                            return [LW (Reg dest) (fromIntegral offset) (Reg 29)]
+                            return [LW (Reg dest) (fromIntegral offset) sp]
 
   op1ToString = show
 

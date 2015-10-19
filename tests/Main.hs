@@ -26,6 +26,7 @@ import Language.Hipster.AST
 import Language.Hipster.Instructions
 import Language.Hipster.Language
 import Language.Hipster.Expressions
+import Language.Hipster.Registers
 import Control.Monad
 import LinearScan.Hoopl
 import LinearScan
