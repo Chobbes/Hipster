@@ -32,6 +32,7 @@ import LinearScan.Hoopl
 import LinearScan.Hoopl.DSL (getStackSlot)
 import Unsafe.Coerce
 import Data.Maybe
+import Data.List
 
 
 -- | Data type representing MIPS instructions, and comments.
@@ -100,8 +101,78 @@ data Inst v e x where
     COMMENT :: String -> Inst v O O
     INLINE_COMMENT :: Inst v e x -> String -> Inst v e x
 
-deriving instance (Show v) => Show (Inst v e x)
+
 deriving instance (Eq v) => Eq (Inst v e x)
+
+instance Show v => Show (Inst v e x) where
+  -- Labels
+  show (LABEL l str i)
+    | i == 0 = str ++ ":"
+    | otherwise = str ++ "_" ++ show i ++ ":"
+
+  show (BLANK_LABEL l) = show l ++ ":"
+  
+  -- Arithmetic
+  show (ADD d s t) = "add " ++ (intercalate ", " $ map show [d, s, t])
+  show (ADDU d s t) = "addu " ++ (intercalate ", " $ map show [d, s, t])
+  show (ADDI d s i) = "addi " ++ show d ++ ", " ++ show s ++ ", " ++ show i
+  show (ADDIU d s i) = "addiu " ++ show d ++ ", " ++ show s ++ ", " ++ show i
+  show (SUB d s t) = "sub " ++ (intercalate ", " $ map show [d, s, t])
+  show (SUBU d s t) = "subu " ++ (intercalate ", " $ map show [d, s, t])
+  show (SUBI d s i) = "subi " ++ show d ++ ", " ++ show s ++ ", " ++ show i
+  show (SUBIU d s i) = "subiu " ++ show d ++ ", " ++ show s ++ ", " ++ show i
+  show (MULT a b) = "mult " ++ show a ++ ", " ++ show b
+  show (MULTU a b) = "multu " ++ show a ++ ", " ++ show b
+  show (DIV a b) = "div " ++ show a ++ ", " ++ show b
+  show (DIVU a b) = "divu " ++ show a ++ ", " ++ show b
+
+    -- Shifts
+  show (SLL d s i) = "sll " ++ show d ++ ", " ++ show s ++ ", " ++ show i
+  show (SLLV d s t) = "sllv " ++ (intercalate ", " $ map show [d, s, t])
+  show (SRA d s i) = "sra " ++ show d ++ ", " ++ show s ++ ", " ++ show i
+  show (SRL d s i) = "srl " ++ show d ++ ", " ++ show s ++ ", " ++ show i
+  show (SRLV d s t) = "srlv " ++ (intercalate ", " $ map show [d, s, t])
+
+    -- Logic
+  show (AND d s t) = "and " ++ (intercalate ", " $ map show [d, s, t])
+  show (ANDI d s i) = "andi " ++ show d ++ ", " ++ show s ++ ", " ++ show i
+  show (OR d s t) = "or " ++ (intercalate ", " $ map show [d, s, t])
+  show (ORI d s i) = "ori " ++ show d ++ ", " ++ show s ++ ", " ++ show i
+  show (XOR d s t) = "xor " ++ (intercalate ", " $ map show [d, s, t])
+  show (XORI d s i) = "xori " ++ show d ++ ", " ++ show s ++ ", " ++ show i
+
+    -- Sets
+  show (SLT d s t) = "slt " ++ (intercalate ", " $ map show [d, s, t])
+  show (SLTI d s i) = "slti " ++ show d ++ ", " ++ show s ++ ", " ++ show i
+  show (SLTU d s t) = "sltu " ++ (intercalate ", " $ map show [d, s, t])
+  show (SLTIU d s i) = "sltiu " ++ show d ++ ", " ++ show s ++ ", " ++ show i
+
+    -- Branches and jumps
+  -- Currently these are problems.
+  show (J l) = "j " ++ show l
+  show (JAL l) = "jal " ++ show l
+
+    -- Loads
+  show (LB d o s) = "lb " ++ show d ++ ", " ++ show o ++ "(" ++ show s ++ ")"
+  show (LUI d i) = "lui " ++ show d ++ ", " ++ show i
+  show (LW d o s) = "lw " ++ show d ++ ", " ++ show o ++ "(" ++ show s ++ ")"
+  show (MFHI d) = "mfhi " ++ show d
+  show (MFLO d) = "mflo " ++ show d
+
+    -- Stores
+  show (SB d o s) = "sb " ++ show d ++ ", " ++ show o ++ "(" ++ show s ++ ")"
+  show (SW d o s) = "sw " ++ show d ++ ", " ++ show o ++ "(" ++ show s ++ ")"
+
+    -- Noop
+  show NOOP = "noop"
+
+    -- System calls
+  show SYSCALL = "syscall"
+
+    -- Comments
+  show (COMMENT str) = "# " ++ str
+  show (INLINE_COMMENT i str) = (show i) ++ " # " ++ str
+
 
 instance NonLocal (Inst v) where
   entryLabel (LABEL l _ _) = l
