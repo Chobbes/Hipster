@@ -63,7 +63,6 @@ instance Num (MipsBlock Register Register) where
 
   signum b = do r <- b
                 sign <- newVar
-                temp <- newVar
                 sra sign r 31  -- This gets us the sign bit.
-                slt temp zero r  -- 1 if 0 < r
-                L.or sign temp sign
+                slt at zero r  -- 1 if 0 < r
+                L.or sign at sign
