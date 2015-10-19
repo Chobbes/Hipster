@@ -132,7 +132,7 @@ toInputOutput = toVarInfo InputOutput
 uniqueToInt :: Unique -> Int
 uniqueToInt = unsafeCoerce
 
-instance NodeAlloc (Inst Register) (Inst Register) where
+instance NodeAlloc (Inst Register) (Inst Physical) where
   isCall _ = False
   
   isBranch (J _) = True
@@ -249,26 +249,26 @@ instance NodeAlloc (Inst Register) (Inst Register) where
   setRegisters m (INLINE_COMMENT i str) = do setI <- setRegisters m i
                                              return $ INLINE_COMMENT setI str
 
-  setRegisters _ l@(LABEL _ _ _) = return l
-  setRegisters _ j@(J _) = return j
+  setRegisters _ (LABEL l s n) = return $ LABEL l s n
+  setRegisters _ (J l) = return $ J l
 
   setRegisters _ n = error $ "Unimplemented setRegisters: " ++ show n
 
 
-  mkMoveOps source _ dest = return [ADDI (Reg dest) (Reg source) 0]
+  mkMoveOps source _ dest = return [ADDI (Phys dest) (Phys source) 0]
 
   mkSaveOps source id = do offset <- getStackSlot (Just id)
-                           return [SW (Reg source) (fromIntegral offset) sp]
+                           return [SW (Phys source) (fromIntegral offset) (physical sp)]
 
   mkRestoreOps id dest = do offset <- getStackSlot (Just id)
-                            return [LW (Reg dest) (fromIntegral offset) sp]
+                            return [LW (Phys dest) (fromIntegral offset) (physical sp)]
 
   op1ToString = show
 
-dstSet :: [((VarId, VarKind), PhysReg)] -> (Register -> Register -> Register -> Inst Register e x) -> Register -> Register -> Register -> Inst Register e x
+dstSet :: [((VarId, VarKind), PhysReg)] -> (Physical -> Physical -> Physical -> Inst Physical e x) -> Register -> Register -> Register -> Inst Physical e x
 dstSet m n d s t = n (regSetOut m d) (regSetIn m s) (regSetIn m t)
 
-immSet :: [((VarId, VarKind), PhysReg)] -> (Register -> Register -> Immediate -> Inst Register e x) -> Register -> Register -> Immediate -> Inst Register e x
+immSet :: [((VarId, VarKind), PhysReg)] -> (Physical -> Physical -> Immediate -> Inst Physical e x) -> Register -> Register -> Immediate -> Inst Physical e x
 immSet m n d s i = n (regSetOut m d) (regSetIn m s) i
 
 uncurry3 :: (a -> b -> c -> d) -> ((a, b, c) -> d)
@@ -276,17 +276,17 @@ uncurry3 f = (\(a, b, c) -> f a b c)
 
 deriving instance Show VarKind
 
-regSet :: VarKind -> [((VarId, VarKind), PhysReg)] -> Register -> Register
-regSet k m (Reg id) = Reg id
-regSet k m (Var id) = Reg . fromJust $ lookup (id, k) m
+regSet :: VarKind -> [((VarId, VarKind), PhysReg)] -> Register -> Physical
+regSet k m (Reg id) = Phys id
+regSet k m (Var id) = Phys . toGeneralReg . fromJust $ lookup (id, k) m
 
-regSetOut :: [((VarId, VarKind), PhysReg)] -> Register -> Register
+regSetOut :: [((VarId, VarKind), PhysReg)] -> Register -> Physical
 regSetOut = regSet Output
 
-regSetIn :: [((VarId, VarKind), PhysReg)] -> Register -> Register
+regSetIn :: [((VarId, VarKind), PhysReg)] -> Register -> Physical
 regSetIn = regSet Input
 
-regSetTemp :: [((VarId, VarKind), PhysReg)] -> Register -> Register
+regSetTemp :: [((VarId, VarKind), PhysReg)] -> Register -> Physical
 regSetTemp = regSet Temp
 
 instInfo :: Register -> Register -> Register -> [VarInfo]
@@ -294,3 +294,8 @@ instInfo d s t = [toOutput d, toInput s, toInput t]
 
 immInfo :: Register -> Register -> [VarInfo]
 immInfo d s = [toOutput d, toInput s]
+
+toGeneralReg :: Int -> Int
+toGeneralReg n
+  | n >= 0 && n <= 23 = n + 2
+  | otherwise = error "Invalid general purpose register."

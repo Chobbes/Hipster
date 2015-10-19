@@ -101,3 +101,7 @@ gp = Reg 28
 sp = Reg 29
 fp = Reg 30
 ra = Reg 31
+
+physical :: Register -> Physical
+physical (Reg n) = Phys n
+physical _ = error "Not a physical register."

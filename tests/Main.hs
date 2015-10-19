@@ -33,7 +33,7 @@ import LinearScan
 import Unsafe.Coerce
 
 
-printAllocRes :: (String, Either [String] (Graph (Inst Register) C C)) -> IO ()
+printAllocRes :: (String, Either [String] (Graph (Inst Physical) C C)) -> IO ()
 printAllocRes (str, Right g) = putStrLn str >> putStrLn (showGraph show g)
 printAllocRes (str, Left fails) = putStrLn str >> print fails
 
