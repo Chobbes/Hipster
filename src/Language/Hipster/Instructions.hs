@@ -297,5 +297,5 @@ immInfo d s = [toOutput d, toInput s]
 
 toGeneralReg :: Int -> Int
 toGeneralReg n
-  | n >= 0 && n <= 23 = n + 2
+  | n >= 0 && n <= 17 = n + 8
   | otherwise = error "Invalid general purpose register."

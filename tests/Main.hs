@@ -41,7 +41,7 @@ main :: IO ()
 main = do putStrLn . showGraph show $ runSimpleUniqueMonad . compileProg $ labelTest
           putStrLn . showGraph show $ runSimpleUniqueMonad . compileProg $ labelTest'
           putStrLn . showGraph show $ runSimpleUniqueMonad . compileProg $ numTest
-          printAllocRes . allocateHoopl 5 0 4 VerifyEnabled (unsafeCoerce (1 :: Int)) $ runSimpleUniqueMonad . compileProg $ labelTest'
+          printAllocRes . allocateHoopl 17 0 4 VerifyEnabled (unsafeCoerce (1 :: Int)) $ runSimpleUniqueMonad . compileProg $ labelTest'
           hspec $
             describe "AST var test" $
               it "newVar composition test" $
