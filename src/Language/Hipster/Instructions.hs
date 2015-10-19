@@ -278,7 +278,7 @@ deriving instance Show VarKind
 
 regSet :: VarKind -> [((VarId, VarKind), PhysReg)] -> Register -> Register
 regSet k m (Reg id) = Reg id
-regSet k m (Var id) = Reg . fromMaybe (-1) {-(error $ "id: " ++ show id ++ ", kind: " ++ show k ++ ", m: " ++ show m) -} $ lookup (id, k) m
+regSet k m (Var id) = Reg . fromJust $ lookup (id, k) m
 
 regSetOut :: [((VarId, VarKind), PhysReg)] -> Register -> Register
 regSetOut = regSet Output
