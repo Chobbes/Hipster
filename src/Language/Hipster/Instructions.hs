@@ -29,17 +29,29 @@ import Language.Hipster.Registers
 import Compiler.Hoopl
 import LinearScan
 import LinearScan.Hoopl
-import LinearScan.Hoopl.DSL (getStackSlot)
+import LinearScan.Hoopl.DSL (getStackSlot, stackPtr)
 import Unsafe.Coerce
 import Data.Maybe
 import Data.List
+import Control.Monad.Trans.State 
+
+-- | Data type for labels.
+data MipsLabel = MipsLabel { hooplLabel :: Label  -- ^ Unique Hoopl label.
+                           , labelPrefix :: String  -- ^ Label prefix.
+                           , labelNum :: Int  -- ^ May be multiple labels with the same
+                           }
+               deriving (Eq)
+
+instance Show MipsLabel where
+  show (MipsLabel _ str i)
+    | i == 0 = str ++ ":"
+    | otherwise = str ++ "_" ++ show i ++ ":"
 
 
 -- | Data type representing MIPS instructions, and comments.
 data Inst v e x where
     -- Labels
-    LABEL :: Label -> String -> Int -> Inst v C O
-    BLANK_LABEL :: Label -> Inst v C O
+    LABEL :: MipsLabel -> Inst v C O
 
     -- Arithmetic
     ADD :: v -> v -> v -> Inst v O O
@@ -48,8 +60,6 @@ data Inst v e x where
     ADDIU :: v -> v -> Immediate -> Inst v O O
     SUB :: v -> v -> v -> Inst v O O
     SUBU :: v -> v -> v -> Inst v O O
-    SUBI :: v -> v -> Immediate -> Inst v O O
-    SUBIU :: v -> v -> Immediate -> Inst v O O
     MULT :: v -> v -> Inst v O O
     MULTU :: v -> v -> Inst v O O
     DIV :: v -> v -> Inst v O O
@@ -77,8 +87,8 @@ data Inst v e x where
     SLTIU :: v -> v -> Immediate -> Inst v O O
 
     -- Branches and jumps
-    J :: Label -> Inst v O C
-    JAL :: Label -> Inst v O C
+    J :: MipsLabel -> Inst v O C
+    JAL :: MipsLabel -> Inst v O C
 
     -- Loads
     LB :: v -> Immediate -> v -> Inst v O O
@@ -106,21 +116,15 @@ deriving instance (Eq v) => Eq (Inst v e x)
 
 instance Show v => Show (Inst v e x) where
   -- Labels
-  show (LABEL l str i)
-    | i == 0 = str ++ ":"
-    | otherwise = str ++ "_" ++ show i ++ ":"
-
-  show (BLANK_LABEL l) = show l ++ ":"
+  show (LABEL ml) = show ml
   
   -- Arithmetic
-  show (ADD d s t) = "add " ++ (intercalate ", " $ map show [d, s, t])
-  show (ADDU d s t) = "addu " ++ (intercalate ", " $ map show [d, s, t])
+  show (ADD d s t) = "add " ++ intercalate ", " (map show [d, s, t])
+  show (ADDU d s t) = "addu " ++ intercalate ", " (map show [d, s, t])
   show (ADDI d s i) = "addi " ++ show d ++ ", " ++ show s ++ ", " ++ show i
   show (ADDIU d s i) = "addiu " ++ show d ++ ", " ++ show s ++ ", " ++ show i
-  show (SUB d s t) = "sub " ++ (intercalate ", " $ map show [d, s, t])
-  show (SUBU d s t) = "subu " ++ (intercalate ", " $ map show [d, s, t])
-  show (SUBI d s i) = "subi " ++ show d ++ ", " ++ show s ++ ", " ++ show i
-  show (SUBIU d s i) = "subiu " ++ show d ++ ", " ++ show s ++ ", " ++ show i
+  show (SUB d s t) = "sub " ++ intercalate ", " (map show [d, s, t])
+  show (SUBU d s t) = "subu " ++ intercalate ", " (map show [d, s, t])
   show (MULT a b) = "mult " ++ show a ++ ", " ++ show b
   show (MULTU a b) = "multu " ++ show a ++ ", " ++ show b
   show (DIV a b) = "div " ++ show a ++ ", " ++ show b
@@ -128,23 +132,23 @@ instance Show v => Show (Inst v e x) where
 
     -- Shifts
   show (SLL d s i) = "sll " ++ show d ++ ", " ++ show s ++ ", " ++ show i
-  show (SLLV d s t) = "sllv " ++ (intercalate ", " $ map show [d, s, t])
+  show (SLLV d s t) = "sllv " ++ intercalate ", " (map show [d, s, t])
   show (SRA d s i) = "sra " ++ show d ++ ", " ++ show s ++ ", " ++ show i
   show (SRL d s i) = "srl " ++ show d ++ ", " ++ show s ++ ", " ++ show i
-  show (SRLV d s t) = "srlv " ++ (intercalate ", " $ map show [d, s, t])
+  show (SRLV d s t) = "srlv " ++ intercalate ", " (map show [d, s, t])
 
     -- Logic
-  show (AND d s t) = "and " ++ (intercalate ", " $ map show [d, s, t])
+  show (AND d s t) = "and " ++ intercalate ", " (map show [d, s, t])
   show (ANDI d s i) = "andi " ++ show d ++ ", " ++ show s ++ ", " ++ show i
-  show (OR d s t) = "or " ++ (intercalate ", " $ map show [d, s, t])
+  show (OR d s t) = "or " ++ intercalate ", " (map show [d, s, t])
   show (ORI d s i) = "ori " ++ show d ++ ", " ++ show s ++ ", " ++ show i
-  show (XOR d s t) = "xor " ++ (intercalate ", " $ map show [d, s, t])
+  show (XOR d s t) = "xor " ++ intercalate ", " (map show [d, s, t])
   show (XORI d s i) = "xori " ++ show d ++ ", " ++ show s ++ ", " ++ show i
 
     -- Sets
-  show (SLT d s t) = "slt " ++ (intercalate ", " $ map show [d, s, t])
+  show (SLT d s t) = "slt " ++ intercalate ", " (map show [d, s, t])
   show (SLTI d s i) = "slti " ++ show d ++ ", " ++ show s ++ ", " ++ show i
-  show (SLTU d s t) = "sltu " ++ (intercalate ", " $ map show [d, s, t])
+  show (SLTU d s t) = "sltu " ++ intercalate ", " (map show [d, s, t])
   show (SLTIU d s i) = "sltiu " ++ show d ++ ", " ++ show s ++ ", " ++ show i
 
     -- Branches and jumps
@@ -171,16 +175,26 @@ instance Show v => Show (Inst v e x) where
 
     -- Comments
   show (COMMENT str) = "# " ++ str
-  show (INLINE_COMMENT i str) = (show i) ++ " # " ++ str
+  show (INLINE_COMMENT i str) = show i ++ " # " ++ str
 
 
 instance NonLocal (Inst v) where
-  entryLabel (LABEL l _ _) = l
-  successors (J l) = [l]
+  entryLabel (LABEL (MipsLabel l _ _)) = l
+  successors (J (MipsLabel l _ _)) = [l]
 
 instance HooplNode (Inst v) where
-  mkBranchNode = J
-  mkLabelNode = BLANK_LABEL
+  mkBranchNode = J . newBlankLabel
+  mkLabelNode = LABEL . newBlankLabel
+
+newBlankLabel :: Label -> MipsLabel
+newBlankLabel l = MipsLabel l "l" (error "Not sure how to get label number...")
+
+labelToInt :: Label -> Int
+labelToInt = unsafeCoerce
+
+intToLabel :: Int -> Label
+intToLabel = unsafeCoerce
+
 
 -- | Turn a register into a VarInfo
 toVarInfo :: VarKind -> Register -> VarInfo
@@ -205,14 +219,14 @@ uniqueToInt = unsafeCoerce
 
 instance NodeAlloc (Inst Register) (Inst Physical) where
   isCall _ = False
-  
+
   isBranch (J _) = True
-  
-  retargetBranch (J _) _ = J
-  
-  mkLabelOp = BLANK_LABEL
-  
-  mkJumpOp = J
+
+  retargetBranch (J ml) _ l = J (ml {hooplLabel = l})
+
+  mkLabelOp = LABEL . newBlankLabel
+
+  mkJumpOp = J . newBlankLabel
 
   -- Arithmetic
   getReferences (ADD d s t) = instInfo d s t
@@ -221,8 +235,6 @@ instance NodeAlloc (Inst Register) (Inst Physical) where
   getReferences (ADDIU d s _) = immInfo d s
   getReferences (SUB d s t) = instInfo d s t
   getReferences (SUBU d s t) = instInfo d s t
-  getReferences (SUBI d s _) = immInfo d s
-  getReferences (SUBIU d s _) = immInfo d s
   getReferences (MULT a b) = map toInput [a, b]
   getReferences (MULTU a b) = map toInput [a, b]
   getReferences (DIV a b) = map toInput [a, b]
@@ -274,8 +286,6 @@ instance NodeAlloc (Inst Register) (Inst Physical) where
   setRegisters m (ADDIU d s i) = return $ immSet m ADDIU d s i
   setRegisters m (SUB d s t) = return $ dstSet m SUB d s t
   setRegisters m (SUBU d s t) = return $ dstSet m SUBU d s t
-  setRegisters m (SUBI d s i) = return $ immSet m SUBI d s i
-  setRegisters m (SUBIU d s i) = return $ immSet m SUBIU d s i
   setRegisters m (MULT a b) = return $ MULT (regSetIn m a) (regSetIn m b)
   setRegisters m (MULTU a b) = return $ MULTU (regSetIn m a) (regSetIn m b)
   setRegisters m (DIV a b) = return $ DIV (regSetIn m a) (regSetIn m b)
@@ -320,19 +330,25 @@ instance NodeAlloc (Inst Register) (Inst Physical) where
   setRegisters m (INLINE_COMMENT i str) = do setI <- setRegisters m i
                                              return $ INLINE_COMMENT setI str
 
-  setRegisters _ (LABEL l s n) = return $ LABEL l s n
-  setRegisters _ (J l) = return $ J l
+  setRegisters _ (LABEL ml) = return $ LABEL ml
+  setRegisters _ (J ml) = return $ J ml
 
   setRegisters _ n = error $ "Unimplemented setRegisters: " ++ show n
 
 
-  mkMoveOps source _ dest = return [ADDI (Phys dest) (Phys source) 0]
+  mkMoveOps source _ dest = return [ADDI (Phys $ toGeneralReg dest) (Phys $ toGeneralReg source) 0]
 
-  mkSaveOps source id = do offset <- getStackSlot (Just id)
-                           return [SW (Phys source) (fromIntegral offset) (physical sp)]
+  mkSaveOps source id = do stack <- gets snd
+                           offset <- getStackSlot (Just id)
+                           if offset >= stackPtr stack
+                             then return [ ADDI (physical sp) (physical sp) (-4)
+                                         , SW (Phys $ toGeneralReg source) (fromIntegral (-offset)) (physical fp)
+                                         ]
+                             else return [ SW (Phys $ toGeneralReg source) (fromIntegral (-offset)) (physical fp) ]
+
 
   mkRestoreOps id dest = do offset <- getStackSlot (Just id)
-                            return [LW (Phys dest) (fromIntegral offset) (physical sp)]
+                            return [LW (Phys $ toGeneralReg dest) (fromIntegral (-offset)) (physical fp)]
 
   op1ToString = show
 
@@ -340,15 +356,15 @@ dstSet :: [((VarId, VarKind), PhysReg)] -> (Physical -> Physical -> Physical -> 
 dstSet m n d s t = n (regSetOut m d) (regSetIn m s) (regSetIn m t)
 
 immSet :: [((VarId, VarKind), PhysReg)] -> (Physical -> Physical -> Immediate -> Inst Physical e x) -> Register -> Register -> Immediate -> Inst Physical e x
-immSet m n d s i = n (regSetOut m d) (regSetIn m s) i
+immSet m n d s = n (regSetOut m d) (regSetIn m s)
 
-uncurry3 :: (a -> b -> c -> d) -> ((a, b, c) -> d)
-uncurry3 f = (\(a, b, c) -> f a b c)
+uncurry3 :: (a -> b -> c -> d) -> (a, b, c) -> d
+uncurry3 f (a,b,c) = f a b c
 
 deriving instance Show VarKind
 
 regSet :: VarKind -> [((VarId, VarKind), PhysReg)] -> Register -> Physical
-regSet k m (Reg id) = Phys id
+regSet _ _ (Reg id) = Phys id
 regSet k m (Var id) = Phys . toGeneralReg . fromJust $ lookup (id, k) m
 
 regSetOut :: [((VarId, VarKind), PhysReg)] -> Register -> Physical

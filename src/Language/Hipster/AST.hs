@@ -72,32 +72,25 @@ getLabel name = do strNum <- gets $ fromMaybe 0 . M.lookup name . fst
                    return unique
 
 
-labelToInt :: Label -> Int
-labelToInt = unsafeCoerce
-
-
-intToLabel :: Int -> Label
-intToLabel = unsafeCoerce
-
 -- Need a state monad which keeps track of the labels.
 type MipsProgram v = StateT (LabelMap (MipsLabelBlock v (Inst v O C))) LabelMonad
 
 
 -- | A basic block for a MIPS program.
-data MipsLabelBlock v a = MipsLabelBlock { blockLabel :: Label  -- ^ Unique Hoopl label.
-                                         , labelPrefix :: String -- ^ Label prefix string.
-                                         , labelNum :: Int  -- ^ May be multiple labels with the same prefix.
+data MipsLabelBlock v a = MipsLabelBlock { blockLabel :: MipsLabel
                                          , mipsBlock :: MipsBlock v a -- ^ Actual block of MIPS instructions.
-                                       }
+                                         }
 
 
 -- | Create a new basic block with a named label.
-newBB :: String -> MipsBlock v (Inst v O C) -> MipsProgram v Label
+newBB :: String -> MipsBlock v (Inst v O C) -> MipsProgram v MipsLabel
 newBB name block = do label <- lift $ getLabel name
-                      let newBlock = MipsLabelBlock label name 0 block
+
+                      let mipsLabel = MipsLabel label name 0
+                      let newBlock = MipsLabelBlock mipsLabel block
                       
                       modify $ mapInsert label newBlock
-                      return label
+                      return mipsLabel
 
 
 -- | Convert a MIPS program to an assoc list of labels and their blocks.
@@ -112,7 +105,7 @@ compileProgList = flip evalState (M.empty, intToLabel 0) . compile'
 -- | Convert a MipsLabelBlock into a closed Hoopl Block.
 toHooplClosed :: MipsLabelBlock v (Inst v O C) -> SimpleUniqueMonad (Block (Inst v) C C)
 toHooplClosed lb = blockJoinHead label <$> mipsComp
-  where label = LABEL (blockLabel lb) (labelPrefix lb) (labelNum lb)
+  where label = LABEL $ blockLabel lb
         mipsComp = toHooplBlock $ mipsBlock lb
 
 

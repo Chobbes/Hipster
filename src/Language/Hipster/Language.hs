@@ -52,12 +52,6 @@ sub d s t = liftF (SUB d s t, d)
 subu :: Dest -> Source -> Source -> MipsBlock Register Register
 subu d s t = liftF (SUBU d s t, d)
 
-subi :: Dest -> Source -> Immediate -> MipsBlock Register Register
-subi d s i = liftF (SUBI d s i, d)
-
-subiu :: Dest -> Source -> Immediate -> MipsBlock Register Register
-subiu d s i = liftF (SUBIU d s i, d)
-
 mult :: Source -> Source -> MipsBlock Register ()
 mult a b = liftF (MULT a b, ())
 
@@ -123,10 +117,10 @@ sltiu d s i = liftF (SLTIU d s i, d)
 
 
 -- Branches and jumps
-j :: Label -> MipsBlock Register (Inst Register O C)
+j :: MipsLabel -> MipsBlock Register (Inst Register O C)
 j = return . J
 
-jal :: Label -> MipsBlock Register (Inst Register O C)
+jal :: MipsLabel -> MipsBlock Register (Inst Register O C)
 jal = return . JAL
 
 -- Loads

@@ -80,6 +80,7 @@ y <- 2 * x + 3
 - Optimization passes (for instance unrolling loop structures nicely)
 - Convert to LLVM for native compilation?
 - Provide a library of pre-existing utilities for writing MIPS code (loops and such).
+- Write a Hoopl pass to conglomerate stack pointer increases within basic blocks.
 
 # Notes
 
