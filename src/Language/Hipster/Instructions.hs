@@ -44,8 +44,8 @@ data MipsLabel = MipsLabel { hooplLabel :: Label  -- ^ Unique Hoopl label.
 
 instance Show MipsLabel where
   show (MipsLabel _ str i)
-    | i == 0 = str ++ ":"
-    | otherwise = str ++ "_" ++ show i ++ ":"
+    | i == 0 = str
+    | otherwise = str ++ "_" ++ show i
 
 
 -- | Data type representing MIPS instructions, and comments.
@@ -116,7 +116,7 @@ deriving instance (Eq v) => Eq (Inst v e x)
 
 instance Show v => Show (Inst v e x) where
   -- Labels
-  show (LABEL ml) = show ml
+  show (LABEL ml) = show ml ++ ":"
   
   -- Arithmetic
   show (ADD d s t) = "add " ++ intercalate ", " (map show [d, s, t])
